@@ -326,8 +326,8 @@ function showDescriptionPhase() {
     // "내 차례" 표시 추가 (시니어 친화적)
     showMyTurnBadge("단어를 설명할 차례입니다!");
     
-    // 설명 작성 팝업을 바로 표시 (CLAUDE.md의 플로우대로)
-    showDescriptionModal();
+    // 설명 작성 팝업은 자동으로 표시하지 않음 - 사용자가 버튼을 눌러야 함
+    // showDescriptionModal();
     
     // 모달 내 입력 필드 초기화
     const modalDescInput = document.getElementById('modal-description-input');
