@@ -428,8 +428,10 @@ async function handleSubmitDescription(customText = null) {
     }
     
     try {
+        let _modalInput = document.getElementById('modal-description-input').value;
+
         console.log('설명 제출 중:', { playerId: AppState.playerInfo.id, roomCode: AppState.roomInfo.code });
-        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/desc?playerId=${AppState.playerInfo.id}&text=${descriptionText.value}`, {
+        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/desc?playerId=${AppState.playerInfo.id}&text=${encodeURIComponent(_modalInput)}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
