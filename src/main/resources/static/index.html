@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>라이어 게임</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 메인 화면 -->
+        <div id="main-screen" class="screen">
+            <div class="container">
+                <h1 class="title">🎭 라이어 게임</h1>
+                <div class="button-group">
+                    <button id="create-room-btn" class="btn btn-primary">방 만들기</button>
+                    <button id="join-room-btn" class="btn btn-secondary">방 참가하기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 방 생성 화면 -->
+        <div id="create-room-screen" class="screen hidden">
+            <div class="container">
+                <h2>방 만들기</h2>
+                <form id="create-room-form">
+                    <div class="form-group">
+                        <label for="host-nickname">닉네임</label>
+                        <input type="text" id="host-nickname" maxlength="20" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="max-players">최대 인원</label>
+                        <select id="max-players">
+                            <option value="3">3명</option>
+                            <option value="4">4명</option>
+                            <option value="5">5명</option>
+                            <option value="6" selected>6명</option>
+                            <option value="8">8명</option>
+                            <option value="10">10명</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="round-limit">라운드 수</label>
+                        <select id="round-limit">
+                            <option value="3" selected>3라운드</option>
+                            <option value="4">4라운드</option>
+                            <option value="5">5라운드</option>
+                        </select>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">방 생성</button>
+                        <button type="button" id="create-back-btn" class="btn btn-secondary">뒤로가기</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 방 참가 화면 -->
+        <div id="join-room-screen" class="screen hidden">
+            <div class="container">
+                <h2>방 참가하기</h2>
+                <form id="join-room-form">
+                    <div class="form-group">
+                        <label for="room-code">방 코드</label>
+                        <input type="text" id="room-code" maxlength="8" placeholder="방 코드를 입력하세요" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="player-nickname">닉네임</label>
+                        <input type="text" id="player-nickname" maxlength="20" required>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">참가하기</button>
+                        <button type="button" id="join-back-btn" class="btn btn-secondary">뒤로가기</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 대기실 화면 -->
+        <div id="waiting-room-screen" class="screen hidden">
+            <div class="container">
+                <h2>대기실</h2>
+                <div class="room-info">
+                    <p>방 코드: <span id="waiting-room-code" class="room-code"></span></p>
+                    <p>내 닉네임: <span id="my-nickname" class="nickname"></span></p>
+                </div>
+                <div class="players-section">
+                    <h3>참가자 목록 (<span id="player-count">0</span>명)</h3>
+                    <div id="players-list" class="players-list"></div>
+                </div>
+                <div class="button-group">
+                    <button id="start-game-btn" class="btn btn-primary hidden">게임 시작</button>
+                    <button id="leave-room-btn" class="btn btn-secondary">방 나가기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 게임 화면 -->
+        <div id="game-screen" class="screen hidden">
+            <div class="container senior-friendly">
+                <!-- 게임 상태 표시 -->
+                <div class="game-status">
+                    <div class="round-info">
+                        <span id="current-round">1</span> / <span id="total-rounds">3</span> 라운드
+                    </div>
+                    <div class="phase-info" id="phase-info">대기 중...</div>
+                </div>
+
+                <!-- 내 정보 -->
+                <div class="my-info">
+                    <div class="my-nickname">나: <span id="game-my-nickname"></span></div>
+                    <div class="my-role" id="my-role"></div>
+                    <div class="my-word" id="my-word"></div>
+                </div>
+
+                <!-- 설명 작성 단계 -->
+                <div id="description-phase" class="game-phase hidden">
+                    <h3>단어에 대해 설명해주세요</h3>
+                    <div class="form-group">
+                        <textarea id="description-input" placeholder="받은 단어에 대해 설명해주세요..." maxlength="200"></textarea>
+                        <div class="char-count"><span id="desc-char-count">0</span>/200</div>
+                    </div>
+                    <button id="submit-description-btn" class="btn btn-primary">설명 완료</button>
+                </div>
+
+                <!-- 설명 완료 대기 -->
+                <div id="description-complete-phase" class="game-phase hidden">
+                    <h3>모든 설명이 완료되었습니다</h3>
+                    <div id="all-descriptions" class="descriptions-list"></div>
+                    <div id="host-controls" class="button-group hidden">
+                        <button id="start-voting-btn" class="btn btn-primary">투표 시작</button>
+                        <button id="continue-description-btn" class="btn btn-secondary">단어에 대해 설명하기</button>
+                    </div>
+                    <div id="waiting-host-decision" class="waiting-message">호스트가 다음 단계를 선택하길 기다리는 중...</div>
+                </div>
+
+                <!-- 투표 단계 -->
+                <div id="voting-phase" class="game-phase hidden">
+                    <h3>라이어를 찾아 투표하세요</h3>
+                    <div id="voting-players" class="voting-grid"></div>
+                </div>
+
+                <!-- 최후진술 단계 -->
+                <div id="final-defense-phase" class="game-phase hidden">
+                    <h3><span id="accused-player-name"></span>님의 최후진술</h3>
+                    <div id="final-defense-form" class="hidden">
+                        <div class="form-group">
+                            <textarea id="final-defense-input" placeholder="최후진술을 작성해주세요..." maxlength="300"></textarea>
+                            <div class="char-count"><span id="final-char-count">0</span>/300</div>
+                        </div>
+                        <button id="submit-final-defense-btn" class="btn btn-primary">최후진술 완료</button>
+                    </div>
+                    <div id="final-defense-waiting" class="waiting-message">최후진술을 기다리는 중...</div>
+                </div>
+
+                <!-- 최후진술 완료 -->
+                <div id="final-defense-complete-phase" class="game-phase hidden">
+                    <h3>최후진술이 완료되었습니다</h3>
+                    <div class="final-defense-display">
+                        <div class="accused-info">
+                            <strong><span id="final-accused-name"></span>님의 최후진술:</strong>
+                        </div>
+                        <div class="final-defense-text" id="final-defense-text"></div>
+                    </div>
+                    <button id="start-final-voting-btn" class="btn btn-primary hidden">생존/사망 투표 시작</button>
+                    <div class="waiting-message">호스트가 재투표를 시작하길 기다리는 중...</div>
+                </div>
+
+                <!-- 생존/사망 재투표 -->
+                <div id="final-voting-phase" class="game-phase hidden">
+                    <h3><span id="final-voting-player-name"></span>님에 대한 최종 투표</h3>
+                    <div class="final-vote-options">
+                        <button id="survive-vote-btn" class="vote-btn survive-btn">생존</button>
+                        <button id="eliminate-vote-btn" class="vote-btn eliminate-btn">사망</button>
+                    </div>
+                </div>
+
+                <!-- 라운드 종료 -->
+                <div id="round-end-phase" class="game-phase hidden">
+                    <h3>라운드가 종료되었습니다</h3>
+                    <div id="round-result" class="round-result"></div>
+                    <div id="host-round-controls" class="button-group hidden">
+                        <button id="proceed-next-round-btn" class="btn btn-primary">다음 라운드 진행</button>
+                    </div>
+                    <div id="waiting-next-round" class="waiting-message">호스트가 다음 라운드를 시작하길 기다리는 중...</div>
+                </div>
+
+                <!-- 게임 종료 -->
+                <div id="game-end-phase" class="game-phase hidden">
+                    <h3 id="game-result-title">게임 종료</h3>
+                    <div id="game-result-content">
+                        <div class="result-info" id="winner-info"></div>
+                        <div class="players-roles" id="players-roles"></div>
+                    </div>
+                    <div class="button-group">
+                        <button id="new-game-btn" class="btn btn-primary">새 게임</button>
+                        <button id="exit-game-btn" class="btn btn-secondary">나가기</button>
+                    </div>
+                </div>
+
+                <!-- 플레이어 목록 (사이드바) -->
+                <div class="players-sidebar">
+                    <h4>플레이어 목록</h4>
+                    <div id="game-players-list" class="game-players-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 게임 시작 카운트다운 팝업 -->
+        <div id="countdown-modal" class="modal-overlay hidden">
+            <div class="modal-content countdown-modal">
+                <h2>게임이 시작됩니다!</h2>
+                <div class="countdown-circle">
+                    <span id="countdown-number">5</span>
+                </div>
+                <p>모든 플레이어는 준비하세요!</p>
+            </div>
+        </div>
+
+        <!-- 설명 작성 팝업 -->
+        <div id="description-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h3>내 단어: <span id="modal-my-word"></span></h3>
+                <div class="form-group">
+                    <textarea id="modal-description-input" placeholder="받은 단어에 대해 설명해주세요..." maxlength="200"></textarea>
+                    <div class="char-count"><span id="modal-desc-char-count">0</span>/200</div>
+                </div>
+                <div class="button-group">
+                    <button id="modal-submit-description-btn" class="btn btn-primary">설명 완료</button>
+                    <button id="modal-cancel-description-btn" class="btn btn-secondary">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 모든 설명 보기 팝업 -->
+        <div id="all-descriptions-modal" class="modal-overlay hidden">
+            <div class="modal-content large-modal">
+                <h3>모든 플레이어의 설명</h3>
+                <div id="modal-all-descriptions" class="descriptions-list"></div>
+                <div class="button-group">
+                    <button id="modal-close-descriptions-btn" class="btn btn-secondary">닫기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 로딩 오버레이 -->
+        <div id="loading-overlay" class="loading-overlay hidden">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">처리 중...</div>
+        </div>
+
+        <!-- 알림 팝업 -->
+        <div id="notification-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <p id="notification-message"></p>
+                </div>
+                <div class="modal-footer">
+                    <button id="notification-close-btn" class="btn btn-primary">확인</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 투표 결과 팝업 -->
+        <div id="vote-result-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>투표 결과</h3>
+                </div>
+                <div class="modal-body">
+                    <div id="vote-result-content"></div>
+                </div>
+                <div class="modal-footer">
+                    <button id="vote-result-close-btn" class="btn btn-primary">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/app.js"></script>
+    <script src="/game.js"></script>
+    <script src="/ui.js"></script>
+</body>
+</html>
