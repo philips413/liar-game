@@ -231,32 +231,26 @@ function handleDescriptionPhaseStarted(data) {
 
 // 라운드 상태 업데이트
 function handleRoundStateUpdate(data) {
-    console.log('라운드 상태 업데이트:', data);
+    const gameData = data.data || data;
+    console.log('라운드 상태 업데이트:', gameData);
     
-    AppState.gamePhase = data.state;
+    AppState.gamePhase = gameData.state;
     
-    if (data.currentRound) {
-        AppState.roomInfo.currentRound = data.currentRound;
+    if (gameData.currentRound) {
+        AppState.roomInfo.currentRound = gameData.currentRound;
     }
     
-    updateGamePhaseDisplay(data);
+    updateGamePhaseDisplay(gameData);
 }
 
 // 모든 설명 완료 처리
 function handleAllDescriptionsComplete(data) {
-    console.log('모든 설명 완료:', data);
-    console.log('descriptions 데이터:', data.descriptions);
+    const gameData = data.data || data;
+    console.log('모든 설명 완료:', gameData);
+    console.log('descriptions 데이터:', gameData.descriptions);
     
     // 설명 목록 표시
-    displayAllDescriptions(data.descriptions);
-    
-    // 모든 플레이어에게 설명 결과 팝업 자동 표시
-    if (data.descriptions && data.descriptions.length > 0) {
-        console.log('설명 팝업 표시 시작');
-        showAllDescriptionsModal(data.descriptions);
-    } else {
-        console.warn('설명 데이터가 비어있습니다');
-    }
+    showAllDescriptionsModal(gameData.descriptions);
     
     // 호스트에게만 투표 시작 버튼 표시
     showDescriptionCompletePhase();

@@ -455,11 +455,6 @@ function showDescriptionCompletePhase() {
         const phaseInfo = document.getElementById('phase-info');
         phaseInfo.textContent = '호스트가 다음 단계를 결정하는 중...';
     }
-    
-    // 모든 설명 보기 팝업 표시 (CLAUDE.md의 플로우대로)
-    if (AppState.gameState && AppState.gameState.messages) {
-        showAllDescriptionsModal(AppState.gameState.messages);
-    }
 }
 
 // 호스트 컨트롤 버튼 강화

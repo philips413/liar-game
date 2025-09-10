@@ -212,7 +212,7 @@ function hideDescriptionModal() {
 // 모든 설명 보기 모달 표시
 function showAllDescriptionsModal(descriptions) {
     const container = document.getElementById('modal-all-descriptions');
-    
+
     if (!descriptions || descriptions.length === 0) {
         container.innerHTML = '<div class="waiting-message">아직 작성된 설명이 없습니다.</div>';
     } else {

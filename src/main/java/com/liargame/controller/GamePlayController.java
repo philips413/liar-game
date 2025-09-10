@@ -1,6 +1,5 @@
 package com.liargame.controller;
 
-import com.liargame.domain.dto.DescriptionRequest;
 import com.liargame.service.GamePlayService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
