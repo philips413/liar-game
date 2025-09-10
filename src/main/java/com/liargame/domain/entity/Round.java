@@ -53,6 +53,6 @@ public class Round {
     private List<MessageLog> messages = new ArrayList<>();
 
     public enum RoundState {
-        DESC, DESC_COMPLETE, VOTE, FINAL_DEFENSE, FINAL_DEFENSE_COMPLETE, FINAL_VOTING, JUDGE, END
+        READY, DESC, DESC_COMPLETE, VOTE, FINAL_DEFENSE, FINAL_DEFENSE_COMPLETE, FINAL_VOTING, JUDGE, END
     }
 }

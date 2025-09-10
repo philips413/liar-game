@@ -163,7 +163,7 @@ public class GameRoomService {
         Round round = Round.builder()
                 .room(room)
                 .idx(roundIdx)
-                .state(Round.RoundState.DESC)
+                .state(Round.RoundState.READY) // 초기 상태는 READY로 설정, 호스트가 설명 단계 시작 시 DESC로 전환
                 .startedAt(LocalDateTime.now())
                 .build();
         
@@ -347,6 +347,86 @@ public class GameRoomService {
     public void broadcastRoomStateUpdate(String roomCode) {
         GameStateResponse roomState = getRoomState(roomCode);
         GameMessage message = GameMessage.of("ROOM_STATE_UPDATE", roomCode, roomState);
+        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
+    }
+    
+    public void handlePlayerDisconnection(String roomCode, Long playerId) {
+        GameRoom room = gameRoomRepository.findByCode(roomCode)
+                .orElse(null);
+        
+        if (room == null) {
+            return;
+        }
+        
+        Player player = playerRepository.findById(playerId)
+                .orElse(null);
+        
+        if (player == null) {
+            return;
+        }
+        
+        // 플레이어 퇴장 처리
+        player.setLeftAt(LocalDateTime.now());
+        playerRepository.save(player);
+        
+        // 게임이 진행 중인 경우에만 게임 중단 처리
+        if (room.getState() == GameRoom.RoomState.ROUND) {
+            List<Player> activePlayers = playerRepository.findByRoomCodeAndLeftAtIsNull(roomCode);
+            
+            log.info("플레이어 퇴장으로 인한 게임 중단 확인: 방 {}, 남은 플레이어 {}", roomCode, activePlayers.size());
+            
+            // 게임 중단하고 대기실로 이동
+            room.setState(GameRoom.RoomState.LOBBY);
+            room.setCurrentRound(null);
+            gameRoomRepository.save(room);
+            
+            // 모든 플레이어 상태 초기화
+            resetAllPlayersForLobby(activePlayers);
+            
+            // 게임 중단 알림 브로드캐스트
+            broadcastGameInterrupted(roomCode, player);
+            
+            logAudit(room.getRoomId(), playerId, "GAME_INTERRUPTED", 
+                    String.format("플레이어 %s 퇴장으로 인한 게임 중단", player.getNickname()));
+        } else {
+            // 대기실에서의 퇴장은 기존 로직 사용
+            broadcastPlayerLeft(roomCode, player);
+        }
+        
+        broadcastRoomStateUpdate(roomCode);
+    }
+    
+    private void resetAllPlayersForLobby(List<Player> players) {
+        for (Player player : players) {
+            player.setRole(Player.PlayerRole.CITIZEN);
+            player.setIsAlive(true);
+            player.setCardWord(null);
+            player.setOrderNo(null);
+        }
+        playerRepository.saveAll(players);
+    }
+    
+    private void broadcastGameInterrupted(String roomCode, Player leftPlayer) {
+        Map<String, Object> interruptData = Map.of(
+                "message", "플레이어의 연결이 원활하지 않아 게임을 진행할수 없습니다. 대기실로 이동합니다.",
+                "leftPlayer", Map.of(
+                        "playerId", leftPlayer.getPlayerId(),
+                        "nickname", leftPlayer.getNickname()
+                )
+        );
+        GameMessage message = GameMessage.of("GAME_INTERRUPTED", roomCode, interruptData);
+        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
+    }
+    
+    private void broadcastPlayerLeft(String roomCode, Player player) {
+        Map<String, Object> playerData = Map.of(
+                "playerId", player.getPlayerId(),
+                "nickname", player.getNickname(),
+                "isHost", player.getIsHost(),
+                "isAlive", player.getIsAlive(),
+                "orderNo", player.getOrderNo() != null ? player.getOrderNo() : 0
+        );
+        GameMessage message = GameMessage.of("PLAYER_LEFT", roomCode, Map.of("player", playerData));
         messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
     }
 }

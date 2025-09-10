@@ -116,6 +116,9 @@ function handleWebSocketMessage(data) {
         case 'GAME_END':
             handleGameEnd(data);
             break;
+        case 'GAME_INTERRUPTED':
+            handleGameInterrupted(data);
+            break;
         default:
             console.warn('알 수 없는 메시지 타입:', data.type);
     }
@@ -242,9 +245,18 @@ function handleRoundStateUpdate(data) {
 // 모든 설명 완료 처리
 function handleAllDescriptionsComplete(data) {
     console.log('모든 설명 완료:', data);
+    console.log('descriptions 데이터:', data.descriptions);
     
     // 설명 목록 표시
     displayAllDescriptions(data.descriptions);
+    
+    // 모든 플레이어에게 설명 결과 팝업 자동 표시
+    if (data.descriptions && data.descriptions.length > 0) {
+        console.log('설명 팝업 표시 시작');
+        showAllDescriptionsModal(data.descriptions);
+    } else {
+        console.warn('설명 데이터가 비어있습니다');
+    }
     
     // 호스트에게만 투표 시작 버튼 표시
     showDescriptionCompletePhase();
@@ -284,6 +296,53 @@ function handleGameEnd(data) {
             returnToWaitingRoom();
         }
     }, 3000);
+}
+
+// 게임 중단 처리
+function handleGameInterrupted(data) {
+    console.log('게임 중단:', data);
+    
+    const leftPlayer = data.data?.leftPlayer;
+    const playerName = leftPlayer ? leftPlayer.nickname : '한 플레이어';
+    const message = data.data?.message || `${playerName}가 나가서 게임을 진행할 수 없습니다. 대기실로 이동합니다.`;
+    
+    // 모달 창으로 게임 중단 메시지 표시
+    showGameInterruptedModal(message, playerName);
+    
+    // 게임 상태 초기화하고 대기실로 이동
+    setTimeout(() => {
+        returnToWaitingRoom();
+    }, 3000);
+}
+
+// 게임 중단 모달 표시
+function showGameInterruptedModal(message, playerName) {
+    // 기존 모달들 모두 닫기
+    hideAllModals();
+    
+    const modalHTML = `
+        <div id="game-interrupted-modal" class="modal-overlay" style="display: flex;">
+            <div class="modal-content" style="text-align: center; padding: 30px; max-width: 400px;">
+                <div style="font-size: 24px; margin-bottom: 20px;">⚠️</div>
+                <h3 style="color: #e74c3c; margin-bottom: 20px;">게임 중단</h3>
+                <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
+                    ${message}
+                </p>
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="font-size: 14px; color: #6c757d; margin: 0;">
+                        잠시 후 자동으로 대기실로 이동합니다...
+                    </p>
+                </div>
+                <button onclick="hideGameInterruptedModal(); returnToWaitingRoom();" 
+                        class="modal-btn primary-btn" 
+                        style="width: 100%; padding: 12px;">
+                    대기실로 이동
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
 // 방 상태 업데이트
@@ -370,15 +429,11 @@ async function handleSubmitDescription(customText = null) {
     
     try {
         console.log('설명 제출 중:', { playerId: AppState.playerInfo.id, roomCode: AppState.roomInfo.code });
-        
-        const response = await fetch(`http://localhost:8081/api/rooms/${AppState.roomInfo.code}/desc?playerId=${AppState.playerInfo.id}`, {
+        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/desc?playerId=${AppState.playerInfo.id}&text=${descriptionText.value}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                text: descriptionText
-            })
         });
         
         console.log('설명 제출 응답:', response.status, response.statusText);
@@ -709,4 +764,19 @@ function disconnectWebSocket() {
         AppState.isConnected = false;
         console.log('WebSocket 연결 해제');
     }
+}
+
+// 게임 중단 모달 닫기
+function hideGameInterruptedModal() {
+    const modal = document.getElementById('game-interrupted-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 모든 모달 닫기
+function hideAllModals() {
+    // 기존 모달들 제거
+    const modals = document.querySelectorAll('.modal-overlay');
+    modals.forEach(modal => modal.remove());
 }

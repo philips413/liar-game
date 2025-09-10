@@ -483,6 +483,13 @@ function displayAllDescriptions(descriptions) {
     const descriptionsContainer = document.getElementById('all-descriptions');
     if (!descriptionsContainer) return;
     
+    // descriptions가 undefined이거나 배열이 아닌 경우 안전 처리
+    if (!descriptions || !Array.isArray(descriptions)) {
+        console.warn('설명 데이터가 올바르지 않습니다:', descriptions);
+        descriptionsContainer.innerHTML = '<div class="description-item">설명을 불러올 수 없습니다.</div>';
+        return;
+    }
+    
     descriptionsContainer.innerHTML = descriptions.map(desc => `
         <div class="description-item">
             <div class="description-author">${desc.playerNickname}</div>

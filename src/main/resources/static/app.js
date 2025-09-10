@@ -218,7 +218,7 @@ function showAllDescriptionsModal(descriptions) {
     } else {
         container.innerHTML = descriptions.map(desc => `
             <div class="description-item">
-                <div class="description-player">${desc.nickname}</div>
+                <div class="description-player">${desc.playerNickname || desc.nickname}</div>
                 <div class="description-text">${desc.text || desc.summary || '내용 없음'}</div>
             </div>
         `).join('');
@@ -678,9 +678,21 @@ window.addEventListener('offline', function() {
     showNotification('네트워크 연결이 끊어졌습니다.');
 });
 
+// 페이지 나가기 전 처리
+function handlePageUnload() {
+    if (AppState.roomInfo.code && AppState.playerInfo.id) {
+        // 동기적으로 방 나가기 API 호출 (페이지 나가기 전)
+        navigator.sendBeacon(`/api/rooms/${AppState.roomInfo.code}/leave?playerId=${AppState.playerInfo.id}`, 
+                             '');
+    }
+}
+
 // 페이지 새로고침 경고
 window.addEventListener('beforeunload', function(event) {
     if (AppState.roomInfo.code && AppState.isConnected) {
+        // 방 나가기 API 호출
+        handlePageUnload();
+        
         event.preventDefault();
         event.returnValue = '게임을 진행 중입니다. 페이지를 나가시겠습니까?';
         return event.returnValue;

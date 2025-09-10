@@ -34,18 +34,27 @@ public class PlayerService {
             throw new RuntimeException("잘못된 방 코드입니다");
         }
         
-        player.setLeftAt(LocalDateTime.now());
-        playerRepository.save(player);
-        
-        // 웹소켓으로 플레이어 퇴장 알림
-        broadcastPlayerLeft(roomCode, player);
-        
-        // 방 상태 업데이트 브로드캐스트
+        // GameRoomService의 플레이어 연결 해제 처리 메서드 호출
+        // 이 메서드는 게임 중단 여부를 자동으로 판단하여 처리함
         try {
             GameRoomService gameRoomService = applicationContext.getBean(GameRoomService.class);
-            gameRoomService.broadcastRoomStateUpdate(roomCode);
+            gameRoomService.handlePlayerDisconnection(roomCode, playerId);
         } catch (Exception e) {
-            log.warn("Failed to broadcast room state update after player left: {}", e.getMessage());
+            log.error("Failed to handle player disconnection: {}", e.getMessage());
+            
+            // 기본 퇴장 처리
+            player.setLeftAt(LocalDateTime.now());
+            playerRepository.save(player);
+            
+            // 웹소켓으로 플레이어 퇴장 알림
+            broadcastPlayerLeft(roomCode, player);
+            
+            try {
+                GameRoomService gameRoomService = applicationContext.getBean(GameRoomService.class);
+                gameRoomService.broadcastRoomStateUpdate(roomCode);
+            } catch (Exception updateException) {
+                log.warn("Failed to broadcast room state update after player left: {}", updateException.getMessage());
+            }
         }
         
         log.info("Player {} left room {}", player.getNickname(), roomCode);

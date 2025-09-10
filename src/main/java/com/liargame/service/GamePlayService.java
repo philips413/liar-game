@@ -50,6 +50,10 @@ public class GamePlayService {
         }
         
         Round round = currentRound.get();
+        if (round.getState() != Round.RoundState.READY) {
+            throw new RuntimeException("설명 단계를 시작할 수 없습니다. 현재 라운드 상태: " + round.getState());
+        }
+        
         round.setState(Round.RoundState.DESC);
         roundRepository.save(round);
         
@@ -82,11 +86,25 @@ public class GamePlayService {
         
         System.out.println("라운드 조회 시도: roomCode=" + roomCode + ", idx=" + room.getCurrentRound());
         Round currentRound = roundRepository.findByRoomCodeAndIdx(roomCode, room.getCurrentRound())
-                .orElseThrow(() -> new RuntimeException("현재 라운드를 찾을 수 없습니다"));
+                .orElseThrow(() -> {
+                    System.out.println("라운드 조회 실패: roomCode=" + roomCode + ", idx=" + room.getCurrentRound());
+                    System.out.println("현재 방의 모든 라운드 확인:");
+                    var allRounds = roundRepository.findByRoomCodeOrderByIdxAsc(roomCode);
+                    for (var round : allRounds) {
+                        System.out.println("- 라운드 " + round.getIdx() + ": " + round.getState());
+                    }
+                    return new RuntimeException("현재 라운드를 찾을 수 없습니다. 방 코드: " + roomCode + ", 라운드: " + room.getCurrentRound());
+                });
         System.out.println("라운드 찾음: " + currentRound.getRoundId() + ", 상태: " + currentRound.getState());
         
         if (currentRound.getState() != Round.RoundState.DESC) {
-            throw new RuntimeException("설명 단계가 아닙니다. 현재 상태: " + currentRound.getState());
+            String errorMessage;
+            if (currentRound.getState() == Round.RoundState.READY) {
+                errorMessage = "호스트가 아직 설명 단계를 시작하지 않았습니다. 호스트가 '설명 단계 시작' 버튼을 클릭할 때까지 기다려주세요.";
+            } else {
+                errorMessage = "현재 설명 단계가 아닙니다. 현재 상태: " + currentRound.getState();
+            }
+            throw new RuntimeException(errorMessage);
         }
         
         MessageLog message = MessageLog.builder()
@@ -611,7 +629,7 @@ public class GamePlayService {
         Round round = Round.builder()
                 .room(room)
                 .idx(roundIdx)
-                .state(Round.RoundState.DESC)
+                .state(Round.RoundState.READY)
                 .startedAt(LocalDateTime.now())
                 .build();
         
@@ -621,8 +639,8 @@ public class GamePlayService {
                 String.format("round: %d", roundIdx));
         
         // 새 라운드 시작 알림
-        broadcastRoundStateChange(room.getCode(), "DESC", 
-                Map.of("message", String.format("%d라운드가 시작되었습니다!", roundIdx)));
+        broadcastRoundStateChange(room.getCode(), "READY", 
+                Map.of("message", String.format("%d라운드가 시작되었습니다! 호스트가 설명 단계를 시작할 때까지 기다려주세요.", roundIdx)));
     }
     
     private void reassignRolesAndWords(List<Player> players, Theme theme) {
@@ -717,8 +735,30 @@ public class GamePlayService {
     
     // WebSocket 브로드캐스트 메소드들
     private void broadcastAllDescriptionsComplete(String roomCode) {
+        GameRoom room = gameRoomRepository.findByCode(roomCode)
+                .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
+        Round currentRound = roundRepository.findByRoomCodeAndIdx(roomCode, room.getCurrentRound())
+                .orElseThrow(() -> new IllegalStateException("현재 라운드를 찾을 수 없습니다"));
+        
+        // 현재 라운드의 모든 설명 메시지 조회
+        List<MessageLog> descriptions = messageLogRepository.findByRoundIdAndTypeOrderByCreatedAtAsc(
+                currentRound.getRoundId(), MessageLog.MessageType.DESC);
+        
+        // 프론트엔드에서 사용할 형태로 변환
+        List<Map<String, Object>> descriptionData = descriptions.stream()
+                .map(msg -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("playerNickname", msg.getPlayer().getNickname());
+                    map.put("text", msg.getText());
+                    return map;
+                })
+                .collect(Collectors.toList());
+        
         GameMessage message = GameMessage.of("ALL_DESCRIPTIONS_COMPLETE", roomCode, 
-                Map.of("message", "모든 설명이 완료되었습니다"));
+                Map.of(
+                    "message", "모든 설명이 완료되었습니다",
+                    "descriptions", descriptionData
+                ));
         messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
     }
     

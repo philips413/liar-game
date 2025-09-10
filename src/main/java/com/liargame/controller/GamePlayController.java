@@ -1,5 +1,6 @@
 package com.liargame.controller;
 
+import com.liargame.domain.dto.DescriptionRequest;
 import com.liargame.service.GamePlayService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,12 +18,12 @@ public class GamePlayController {
     
     @PostMapping("/desc")
     public ResponseEntity<Map<String, String>> submitDescription(
-            @PathVariable String roomCode,
-            @RequestParam Long playerId,
-            @RequestBody Map<String, String> request) {
+        @PathVariable String roomCode,
+        @RequestParam String playerId,
+        @RequestParam String text
+    ) {
         try {
-            String description = request.get("text");
-            gamePlayService.submitDescription(roomCode, playerId, description);
+            gamePlayService.submitDescription(roomCode, Long.valueOf(playerId), text);
             return ResponseEntity.ok(Map.of("message", "설명이 제출되었습니다"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
