@@ -169,10 +169,8 @@ public class GameRoomService {
         
         roundRepository.save(round);
         
-        // 설명 단계 시작 알림
-        GameMessage message = GameMessage.of("DESCRIPTION_PHASE_STARTED", room.getCode(), 
-                Map.of("message", "설명 단계가 시작되었습니다", "roundIdx", roundIdx));
-        messagingTemplate.convertAndSend("/topic/rooms/" + room.getCode(), message);
+        // 게임 시작 시에는 설명 단계 시작 알림을 보내지 않음
+        // 호스트가 명시적으로 설명 단계를 시작했을 때만 알림 전송
         
         logAudit(room.getRoomId(), null, "ROUND_STARTED", 
                 String.format("round: %d, alivePlayers: %d", roundIdx, alivePlayers.size()));

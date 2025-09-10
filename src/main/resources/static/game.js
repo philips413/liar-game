@@ -175,23 +175,23 @@ function handleGameStarted(data) {
     const gameData = data.data || data;
     const gameState = gameData.gameState;
     const players = gameData.players || gameState?.players || AppState.players;
-    
+
     console.log('게임 데이터:', gameData);
     console.log('게임 상태:', gameState);
     console.log('플레이어 목록:', players);
-    
+
     // 게임 상태 업데이트
     AppState.gameState = gameState;
     AppState.roomInfo.state = gameData.roomState || 'ROUND';
     AppState.roomInfo.currentRound = gameData.currentRound || 1;
-    
+
     // 5초 카운트다운 시작
     showStartGameCountdown();
-    
+
     // 플레이어 목록 업데이트
     if (players && Array.isArray(players)) {
         AppState.players = players;
-        
+
         // 내 정보 업데이트
         const myPlayer = players.find(p => p.playerId === AppState.playerInfo.id);
         if (myPlayer) {
@@ -221,6 +221,8 @@ function handleDescriptionPhaseStarted(data) {
     
     // 모든 플레이어에게 설명 단계 표시
     showDescriptionPhase();
+    // 모든 플레이어에게 설명 팝업 바로 표시
+    showDescriptionModal();
     showNotification('설명 단계가 시작되었습니다!');
 }
 

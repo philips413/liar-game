@@ -1,6 +1,3 @@
-// API 기본 URL 설정
-const API_BASE_URL = 'http://localhost:8081';
-
 // 애플리케이션 전역 상태
 const AppState = {
     currentScreen: 'main-screen',
@@ -517,7 +514,7 @@ async function handleStartGame() {
         }
 
         console.log('게임 시작 성공');
-        
+
     } catch (error) {
         console.error('게임 시작 오류:', error);
         showNotification(error.message);

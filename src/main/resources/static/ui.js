@@ -203,6 +203,8 @@ async function handleHostStartDescription() {
         
         // 호스트도 설명 단계 시작
         showDescriptionPhase();
+        // 호스트에게도 설명 팝업 바로 표시
+        showDescriptionModal();
         showNotification('설명 단계가 시작되었습니다!');
         
     } catch (error) {
@@ -222,7 +224,7 @@ function showGameScreen() {
     updateMyInfoDisplay();
     updateGamePlayersList();
     updateRoundDisplay();
-    
+
     // 호스트 여부에 따라 다른 화면 표시
     if (AppState.playerInfo.isHost) {
         showHostGameStartControls();
@@ -282,7 +284,8 @@ function updateGamePhaseDisplay(data) {
     
     switch (data.state || AppState.gamePhase) {
         case 'DESC':
-            showDescriptionPhase();
+            // 설명 단계 UI는 표시하지만 팝업은 호스트가 명시적으로 시작했을 때만
+            showDescriptionPhaseWithoutModal();
             phaseInfo.textContent = '설명 작성';
             break;
         case 'DESC_COMPLETE':
@@ -318,16 +321,41 @@ function updateGamePhaseDisplay(data) {
     }
 }
 
-// 설명 작성 단계 표시
+// 설명 작성 단계 표시 (팝업 없음)
+function showDescriptionPhaseWithoutModal() {
+    const descriptionPhase = document.getElementById('description-phase');
+    descriptionPhase.classList.remove('hidden');
+    
+    // "내 차례" 표시는 하지 않음 - 호스트가 명시적으로 시작했을 때만
+    // showMyTurnBadge("단어를 설명할 차례입니다!");
+    
+    // 모달 내 입력 필드 초기화
+    const modalDescInput = document.getElementById('modal-description-input');
+    if (modalDescInput) {
+        modalDescInput.value = '';
+        modalDescInput.disabled = false;
+    }
+    
+    // 모달 글자 수 카운터 초기화
+    const modalCharCount = document.getElementById('modal-desc-char-count');
+    if (modalCharCount) {
+        modalCharCount.textContent = '0';
+    }
+    
+    // 모달 이벤트 리스너 바인딩 확인
+    if (modalDescInput && !modalDescInput.hasAttribute('data-listener-bound')) {
+        modalDescInput.addEventListener('input', handleDescriptionInput);
+        modalDescInput.setAttribute('data-listener-bound', 'true');
+    }
+}
+
+// 설명 작성 단계 표시 (팝업 포함)
 function showDescriptionPhase() {
     const descriptionPhase = document.getElementById('description-phase');
     descriptionPhase.classList.remove('hidden');
     
     // "내 차례" 표시 추가 (시니어 친화적)
     showMyTurnBadge("단어를 설명할 차례입니다!");
-    
-    // 설명 작성 팝업은 자동으로 표시하지 않음 - 사용자가 버튼을 눌러야 함
-    // showDescriptionModal();
     
     // 모달 내 입력 필드 초기화
     const modalDescInput = document.getElementById('modal-description-input');
