@@ -541,11 +541,15 @@ function handleVoteClick(targetPlayerId) {
 // 투표 결과 표시
 function displayVoteResult(data) {
     const modalContent = document.getElementById('vote-result-content');
-    
-    if (data.voteResults && data.voteResults.length > 0) {
-        modalContent.innerHTML = data.voteResults.map(result => `
+
+    console.log("===========asdads");
+    console.log(data);
+    console.log("===========asdads");
+
+    if (data.results && data.results.length > 0) {
+        modalContent.innerHTML = data.results.map(result => `
             <div class="vote-result-item">
-                <div class="vote-result-name">${result.playerNickname}</div>
+                <div class="vote-result-name">${result.playerName}</div>
                 <div class="vote-result-count">${result.voteCount}표</div>
             </div>
         `).join('');
@@ -554,10 +558,10 @@ function displayVoteResult(data) {
     }
     
     // 결과에 따른 메시지 추가
-    if (data.accusedPlayer) {
+    if (data.accusedName) {
         const accusedMessage = document.createElement('div');
         accusedMessage.className = 'vote-result-summary';
-        accusedMessage.innerHTML = `<p><strong>${data.accusedPlayer.nickname}님이 지목되었습니다!</strong></p>`;
+        accusedMessage.innerHTML = `<p><strong>${data.accusedName}님이 지목되었습니다!</strong></p>`;
         modalContent.appendChild(accusedMessage);
     } else {
         const noAccusedMessage = document.createElement('div');

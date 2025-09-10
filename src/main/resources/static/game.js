@@ -258,31 +258,35 @@ function handleAllDescriptionsComplete(data) {
 
 // 투표 결과 처리
 function handleVoteResult(data) {
-    console.log('투표 결과:', data);
+    const gameData = data.data || data;
+    console.log('투표 결과:', gameData);
     
-    displayVoteResult(data);
+    displayVoteResult(gameData);
 }
 
 // 최후진술 완료 처리
 function handleFinalDefenseComplete(data) {
-    console.log('최후진술 완료:', data);
+    const gameData = data.data || data;
+    console.log('최후진술 완료:', gameData);
     
-    showFinalDefenseCompletePhase(data);
+    showFinalDefenseCompletePhase(gameData);
 }
 
 // 생존/사망 재투표 시작
 function handleFinalVotingStart(data) {
-    console.log('재투표 시작:', data);
+    const gameData = data.data || data;
+    console.log('재투표 시작:', gameData);
     
-    showFinalVotingPhase(data.accusedPlayer);
+    showFinalVotingPhase(gameData.accusedPlayer);
 }
 
 // 게임 종료 처리
 function handleGameEnd(data) {
-    console.log('게임 종료:', data);
+    const gameData = data.data || data;
+    console.log('게임 종료:', gameData);
     
     // 게임 종료 화면을 먼저 보여줌
-    showGameEndPhase(data);
+    showGameEndPhase(gameData);
     
     // 5초 후 자동으로 대기실로 이동
     setTimeout(() => {
