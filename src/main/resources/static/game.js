@@ -510,16 +510,11 @@ async function handleVoteSubmit(targetPlayerId) {
     }
     
     try {
-        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/vote`, {
+        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/vote?voterId=${AppState.playerInfo.id}&targetId=${targetPlayerId}&roundIdx=${AppState.roomInfo.currentRound}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                playerId: AppState.playerInfo.id,
-                targetPlayerId: targetPlayerId,
-                roundIdx: AppState.roomInfo.currentRound
-            })
+            }
         });
         
         if (!response.ok) {

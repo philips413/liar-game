@@ -32,11 +32,11 @@ public class GamePlayController {
     @PostMapping("/vote")
     public ResponseEntity<Map<String, String>> submitVote(
             @PathVariable String roomCode,
-            @RequestParam Long voterId,
-            @RequestParam Long targetId,
+            @RequestParam String voterId,
+            @RequestParam String targetId,
             @RequestParam(defaultValue = "false") boolean isFinalVote) {
         try {
-            gamePlayService.submitVote(roomCode, voterId, targetId, isFinalVote);
+            gamePlayService.submitVote(roomCode, Long.valueOf(voterId), Long.valueOf(targetId), isFinalVote);
             return ResponseEntity.ok(Map.of("message", "투표가 완료되었습니다"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
