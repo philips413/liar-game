@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -167,6 +168,11 @@ public class GameRoomService {
                 .build();
         
         roundRepository.save(round);
+        
+        // 설명 단계 시작 알림
+        GameMessage message = GameMessage.of("DESCRIPTION_PHASE_STARTED", room.getCode(), 
+                Map.of("message", "설명 단계가 시작되었습니다", "roundIdx", roundIdx));
+        messagingTemplate.convertAndSend("/topic/rooms/" + room.getCode(), message);
         
         logAudit(room.getRoomId(), null, "ROUND_STARTED", 
                 String.format("round: %d, alivePlayers: %d", roundIdx, alivePlayers.size()));
@@ -325,8 +331,18 @@ public class GameRoomService {
     }
     
     private void broadcastGameStarted(String roomCode) {
-        GameMessage message = GameMessage.of("GAME_STARTED", roomCode, 
-                Map.of("message", "게임이 시작되었습니다"));
+        // 현재 방 상태와 플레이어 정보를 함께 전송
+        GameStateResponse roomState = getRoomState(roomCode);
+        
+        Map<String, Object> gameStartData = Map.of(
+                "message", "게임이 시작되었습니다",
+                "gameState", roomState,
+                "players", roomState.getPlayers() != null ? roomState.getPlayers() : List.of(),
+                "roomState", roomState.getRoomState(),
+                "currentRound", roomState.getCurrentRound() != null ? roomState.getCurrentRound() : 1
+        );
+        
+        GameMessage message = GameMessage.of("GAME_STARTED", roomCode, gameStartData);
         messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
     }
     

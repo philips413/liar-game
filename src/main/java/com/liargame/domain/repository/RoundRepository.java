@@ -15,9 +15,11 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
     
     List<Round> findByRoomRoomIdOrderByIdxAsc(Long roomId);
     
-    List<Round> findByRoomCodeOrderByIdxAsc(String roomCode);
+    @Query("SELECT r FROM Round r WHERE r.room.code = :roomCode ORDER BY r.idx ASC")
+    List<Round> findByRoomCodeOrderByIdxAsc(@Param("roomCode") String roomCode);
     
-    Optional<Round> findByRoomCodeAndIdx(String roomCode, Integer idx);
+    @Query("SELECT r FROM Round r WHERE r.room.code = :roomCode AND r.idx = :idx")
+    Optional<Round> findByRoomCodeAndIdx(@Param("roomCode") String roomCode, @Param("idx") Integer idx);
     
     Optional<Round> findByRoomAndIdx(GameRoom room, Integer idx);
     

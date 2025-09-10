@@ -27,22 +27,66 @@ public class GamePlayService {
     private final AuditLogRepository auditLogRepository;
     private final SimpMessageSendingOperations messagingTemplate;
     
-    public void submitDescription(String roomCode, Long playerId, String description) {
+    public void startDescriptionPhase(String roomCode, Long hostId) {
+        // 호스트 권한 확인
+        Player host = playerRepository.findById(hostId)
+                .orElseThrow(() -> new RuntimeException("플레이어를 찾을 수 없습니다"));
+        
+        if (!host.getIsHost()) {
+            throw new RuntimeException("호스트만 설명 단계를 시작할 수 있습니다");
+        }
+        
         GameRoom room = gameRoomRepository.findByCode(roomCode)
                 .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
         
+        if (room.getState() != GameRoom.RoomState.ROUND) {
+            throw new RuntimeException("게임이 진행 중이 아닙니다");
+        }
+        
+        // 현재 라운드 확인
+        Optional<Round> currentRound = roundRepository.findByRoomCodeAndIdx(roomCode, room.getCurrentRound());
+        if (currentRound.isEmpty()) {
+            throw new RuntimeException("현재 라운드를 찾을 수 없습니다");
+        }
+        
+        Round round = currentRound.get();
+        round.setState(Round.RoundState.DESC);
+        roundRepository.save(round);
+        
+        // 모든 플레이어에게 설명 단계 시작 알림
+        GameMessage message = GameMessage.of("DESCRIPTION_PHASE_STARTED", roomCode, 
+                Map.of("message", "설명 단계가 시작되었습니다", "roundIdx", room.getCurrentRound()));
+        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
+        
+        logAudit(room.getRoomId(), hostId, "DESCRIPTION_PHASE_STARTED", 
+                String.format("round: %d", room.getCurrentRound()));
+    }
+    
+    public void submitDescription(String roomCode, Long playerId, String description) {
+        System.out.println("=== submitDescription 시작 ===");
+        System.out.println("roomCode: " + roomCode);
+        System.out.println("playerId: " + playerId);
+        System.out.println("description: " + description);
+        
+        GameRoom room = gameRoomRepository.findByCode(roomCode)
+                .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
+        System.out.println("방 찾음: " + room.getRoomId() + ", 상태: " + room.getState() + ", 현재라운드: " + room.getCurrentRound());
+        
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new RuntimeException("플레이어를 찾을 수 없습니다"));
+        System.out.println("플레이어 찾음: " + player.getNickname() + ", 생존: " + player.getIsAlive());
         
         if (!player.getIsAlive()) {
             throw new RuntimeException("사망한 플레이어는 발언할 수 없습니다");
         }
         
+        System.out.println("라운드 조회 시도: roomCode=" + roomCode + ", idx=" + room.getCurrentRound());
         Round currentRound = roundRepository.findByRoomCodeAndIdx(roomCode, room.getCurrentRound())
                 .orElseThrow(() -> new RuntimeException("현재 라운드를 찾을 수 없습니다"));
+        System.out.println("라운드 찾음: " + currentRound.getRoundId() + ", 상태: " + currentRound.getState());
         
         if (currentRound.getState() != Round.RoundState.DESC) {
-            throw new RuntimeException("설명 단계가 아닙니다");
+            throw new RuntimeException("설명 단계가 아닙니다. 현재 상태: " + currentRound.getState());
         }
         
         MessageLog message = MessageLog.builder()

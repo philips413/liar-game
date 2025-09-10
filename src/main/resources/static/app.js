@@ -1,3 +1,6 @@
+// API 기본 URL 설정
+const API_BASE_URL = 'http://localhost:8081';
+
 // 애플리케이션 전역 상태
 const AppState = {
     currentScreen: 'main-screen',
@@ -204,6 +207,11 @@ function showDescriptionModal() {
     showModal('description-modal');
 }
 
+// 설명 작성 모달 숨기기
+function hideDescriptionModal() {
+    hideModal('description-modal');
+}
+
 // 모든 설명 보기 모달 표시
 function showAllDescriptionsModal(descriptions) {
     const container = document.getElementById('modal-all-descriptions');
@@ -237,10 +245,21 @@ function handleModalSubmitDescription() {
         return;
     }
     
+    // 메인 설명 입력 필드에 텍스트 설정
+    const mainInput = document.getElementById('description-input');
+    if (mainInput) {
+        mainInput.value = text;
+    }
+    
     hideModal('description-modal');
     
-    // 실제 설명 제출
-    submitDescription(text);
+    // 메인 화면의 제출 버튼을 프로그래밍 방식으로 클릭
+    const mainSubmitBtn = document.getElementById('submit-description-btn');
+    if (mainSubmitBtn && !mainSubmitBtn.disabled) {
+        mainSubmitBtn.click();
+    } else {
+        showNotification('설명 제출 버튼을 찾을 수 없거나 이미 제출되었습니다.');
+    }
 }
 
 // 화면 전환

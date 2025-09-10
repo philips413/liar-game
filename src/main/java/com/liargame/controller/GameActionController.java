@@ -15,6 +15,18 @@ public class GameActionController {
     
     private final GamePlayService gamePlayService;
     
+    @PostMapping("/start-description")
+    public ResponseEntity<Map<String, String>> startDescription(
+            @PathVariable String roomCode,
+            @RequestParam Long hostId) {
+        try {
+            gamePlayService.startDescriptionPhase(roomCode, hostId);
+            return ResponseEntity.ok(Map.of("message", "설명 단계가 시작되었습니다"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+    
     @PostMapping("/start-voting")
     public ResponseEntity<Map<String, String>> startVoting(@PathVariable String roomCode) {
         try {

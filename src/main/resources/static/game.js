@@ -110,6 +110,9 @@ function handleWebSocketMessage(data) {
         case 'FINAL_VOTING':
             handleFinalVotingStart(data);
             break;
+        case 'DESCRIPTION_PHASE_STARTED':
+            handleDescriptionPhaseStarted(data);
+            break;
         case 'GAME_END':
             handleGameEnd(data);
             break;
@@ -168,25 +171,57 @@ function handleRoomStateUpdate(data) {
 function handleGameStarted(data) {
     console.log('게임 시작:', data);
     
-    AppState.gameState = data.gameState;
-    AppState.roomInfo.state = 'ROUND';
-    AppState.roomInfo.currentRound = 1;
+    // 새로운 메시지 구조에서 데이터 추출
+    const gameData = data.data || data;
+    const gameState = gameData.gameState;
+    const players = gameData.players || gameState?.players || AppState.players;
+    
+    console.log('게임 데이터:', gameData);
+    console.log('게임 상태:', gameState);
+    console.log('플레이어 목록:', players);
+    
+    // 게임 상태 업데이트
+    AppState.gameState = gameState;
+    AppState.roomInfo.state = gameData.roomState || 'ROUND';
+    AppState.roomInfo.currentRound = gameData.currentRound || 1;
     
     // 5초 카운트다운 시작
     showStartGameCountdown();
     
-    // 내 정보 업데이트
-    const myPlayer = data.players.find(p => p.playerId === AppState.playerInfo.id);
-    if (myPlayer) {
-        AppState.playerInfo.role = myPlayer.role;
-        AppState.playerInfo.cardWord = myPlayer.cardWord;
-    }
-    
     // 플레이어 목록 업데이트
-    AppState.players = data.players;
+    if (players && Array.isArray(players)) {
+        AppState.players = players;
+        
+        // 내 정보 업데이트
+        const myPlayer = players.find(p => p.playerId === AppState.playerInfo.id);
+        if (myPlayer) {
+            AppState.playerInfo.role = myPlayer.role;
+            AppState.playerInfo.cardWord = myPlayer.cardWord;
+            console.log('내 역할 업데이트:', AppState.playerInfo.role, '카드 단어:', AppState.playerInfo.cardWord);
+        } else {
+            console.warn('내 플레이어 정보를 찾을 수 없습니다. playerId:', AppState.playerInfo.id);
+        }
+    } else {
+        console.warn('플레이어 목록이 없습니다. 기존 상태 유지');
+    }
     
     showGameScreen();
     showNotification('게임이 시작되었습니다!');
+}
+
+// 설명 단계 시작 처리
+function handleDescriptionPhaseStarted(data) {
+    console.log('설명 단계 시작:', data);
+    
+    // 호스트 시작 컨트롤 숨김
+    const hostStartControls = document.getElementById('host-start-controls');
+    if (hostStartControls) {
+        hostStartControls.remove();
+    }
+    
+    // 모든 플레이어에게 설명 단계 표시
+    showDescriptionPhase();
+    showNotification('설명 단계가 시작되었습니다!');
 }
 
 // 라운드 상태 업데이트
@@ -310,17 +345,23 @@ function updateGameState(gameState) {
 }
 
 // 설명 제출
-async function handleSubmitDescription() {
-    const descriptionText = document.getElementById('description-input').value.trim();
+async function handleSubmitDescription(customText = null) {
+    let descriptionText = customText;
+    
+    // customText가 없으면 모달에서 가져오기
+    if (!descriptionText) {
+        const modalInput = document.getElementById('modal-description-input');
+        descriptionText = modalInput ? modalInput.value.trim() : '';
+    }
     
     if (!descriptionText) {
         showNotification('설명을 입력해주세요.');
         return;
     }
     
-    // 중복 제출 방지
-    const submitBtn = document.getElementById('submit-description-btn');
-    if (submitBtn.disabled) {
+    // 중복 제출 방지 (모달 버튼 체크)
+    const modalSubmitBtn = document.getElementById('modal-submit-description-btn');
+    if (modalSubmitBtn && modalSubmitBtn.disabled) {
         showNotification('이미 설명이 제출되었습니다.');
         return;
     }
@@ -328,14 +369,13 @@ async function handleSubmitDescription() {
     try {
         console.log('설명 제출 중:', { playerId: AppState.playerInfo.id, roomCode: AppState.roomInfo.code });
         
-        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/desc`, {
+        const response = await fetch(`http://localhost:8081/api/rooms/${AppState.roomInfo.code}/desc?playerId=${AppState.playerInfo.id}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                playerId: AppState.playerInfo.id,
-                description: descriptionText
+                text: descriptionText
             })
         });
         
@@ -360,9 +400,17 @@ async function handleSubmitDescription() {
             throw new Error(errorMessage);
         }
         
-        // UI 비활성화
-        document.getElementById('description-input').disabled = true;
-        submitBtn.disabled = true;
+        // 모달 UI 비활성화
+        const modalInput = document.getElementById('modal-description-input');
+        if (modalInput) {
+            modalInput.disabled = true;
+        }
+        if (modalSubmitBtn) {
+            modalSubmitBtn.disabled = true;
+        }
+        
+        // 모달 닫기
+        hideDescriptionModal();
         
         showNotification('설명이 제출되었습니다. 다른 플레이어들을 기다리는 중...');
         

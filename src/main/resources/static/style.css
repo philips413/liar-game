@@ -958,3 +958,85 @@ textarea {
         padding: 15px;
     }
 }
+
+/* 호스트 전용 컨트롤 스타일 */
+.host-controls {
+    background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+    border: 3px solid #e17055;
+    border-radius: 15px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 8px 16px rgba(225, 112, 85, 0.3);
+}
+
+.host-controls h3 {
+    color: #d63031;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+.host-control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.host-control-buttons .btn {
+    min-width: 250px;
+    padding: 15px 25px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.host-control-buttons .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+.control-description {
+    background: rgba(255,255,255,0.9);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #2d3436;
+    text-align: center;
+    border: 1px solid #ddd;
+    margin-top: 5px;
+}
+
+.large-btn {
+    padding: 18px 30px !important;
+    font-size: 1.2rem !important;
+    min-height: 60px;
+    background: linear-gradient(135deg, #00b894 0%, #00cec9 100%) !important;
+    border: none !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(0, 184, 148, 0.4);
+}
+
+.large-btn:hover {
+    background: linear-gradient(135deg, #00a085 0%, #00b7b3 100%) !important;
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 25px rgba(0, 184, 148, 0.6) !important;
+}
+
+/* 호스트 배지 강조 */
+.player-badge.host {
+    background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+    color: white;
+    font-weight: bold;
+    animation: hostPulse 2s infinite;
+}
+
+@keyframes hostPulse {
+    0% { box-shadow: 0 0 0 0 rgba(232, 67, 147, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(232, 67, 147, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(232, 67, 147, 0); }
+}

@@ -90,12 +90,145 @@ function forceUpdateStartGameButton() {
     }
 }
 
+// 호스트 전용 게임 시작 컨트롤 표시
+function showHostGameStartControls() {
+    console.log('호스트 게임 시작 컨트롤 표시');
+    
+    // 모든 게임 단계 숨김
+    hideAllGamePhases();
+    
+    // 호스트 게임 시작 단계 표시
+    showHostStartPhase();
+}
+
+// 호스트가 아닌 플레이어 대기 화면
+function showWaitingForHostPhase() {
+    console.log('호스트 대기 화면 표시');
+    
+    // 모든 게임 단계 숨김
+    hideAllGamePhases();
+    
+    // 대기 메시지 표시
+    const phaseInfo = document.getElementById('phase-info');
+    phaseInfo.textContent = '호스트가 게임을 시작하길 기다리는 중...';
+}
+
+// 모든 게임 단계 숨김
+function hideAllGamePhases() {
+    const phases = [
+        'description-phase',
+        'description-complete-phase', 
+        'voting-phase',
+        'final-defense-phase',
+        'final-defense-complete-phase',
+        'final-voting-phase',
+        'round-end-phase',
+        'game-end-phase'
+    ];
+    
+    phases.forEach(phaseId => {
+        const phase = document.getElementById(phaseId);
+        if (phase) {
+            phase.classList.add('hidden');
+        }
+    });
+}
+
+// 호스트 게임 시작 단계 표시
+function showHostStartPhase() {
+    const phaseInfo = document.getElementById('phase-info');
+    phaseInfo.textContent = '호스트 - 게임 진행 단계를 선택하세요';
+    
+    // 호스트 전용 컨트롤 생성 및 표시
+    const hostStartControls = createHostStartControls();
+    const gameContainer = document.querySelector('#game-screen .container');
+    
+    // 기존 호스트 시작 컨트롤 제거
+    const existing = document.getElementById('host-start-controls');
+    if (existing) {
+        existing.remove();
+    }
+    
+    gameContainer.appendChild(hostStartControls);
+}
+
+// 호스트 시작 컨트롤 생성
+function createHostStartControls() {
+    const controlsDiv = document.createElement('div');
+    controlsDiv.id = 'host-start-controls';
+    controlsDiv.className = 'game-phase host-controls';
+    
+    controlsDiv.innerHTML = `
+        <h3>🎮 게임 진행 관리</h3>
+        <div class="host-control-buttons">
+            <button id="host-start-description-btn" class="btn btn-primary large-btn">
+                📝 설명 단계 시작
+            </button>
+            <div class="control-description">
+                모든 플레이어가 받은 단어에 대해 설명을 작성합니다
+            </div>
+        </div>
+    `;
+    
+    // 이벤트 리스너 추가
+    setTimeout(() => {
+        const startDescBtn = document.getElementById('host-start-description-btn');
+        if (startDescBtn) {
+            startDescBtn.addEventListener('click', handleHostStartDescription);
+        }
+    }, 100);
+    
+    return controlsDiv;
+}
+
+// 호스트가 설명 단계 시작
+async function handleHostStartDescription() {
+    console.log('호스트가 설명 단계 시작');
+    
+    // 호스트 시작 컨트롤 숨김
+    const hostStartControls = document.getElementById('host-start-controls');
+    if (hostStartControls) {
+        hostStartControls.classList.add('hidden');
+    }
+    
+    // 모든 플레이어에게 설명 단계 시작 알림
+    try {
+        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/actions/start-description?hostId=${AppState.playerInfo.id}`, {
+            method: 'POST'
+        });
+        
+        if (!response.ok) {
+            throw new Error('설명 단계 시작에 실패했습니다.');
+        }
+        
+        // 호스트도 설명 단계 시작
+        showDescriptionPhase();
+        showNotification('설명 단계가 시작되었습니다!');
+        
+    } catch (error) {
+        console.error('설명 단계 시작 오류:', error);
+        showNotification(error.message);
+        
+        // 호스트 컨트롤 다시 표시
+        if (hostStartControls) {
+            hostStartControls.classList.remove('hidden');
+        }
+    }
+}
+
 // 게임 화면 표시
 function showGameScreen() {
     showScreen('game-screen');
     updateMyInfoDisplay();
     updateGamePlayersList();
     updateRoundDisplay();
+    
+    // 호스트 여부에 따라 다른 화면 표시
+    if (AppState.playerInfo.isHost) {
+        showHostGameStartControls();
+    } else {
+        showWaitingForHostPhase();
+    }
 }
 
 // 내 정보 표시 업데이트
@@ -196,22 +329,23 @@ function showDescriptionPhase() {
     // 설명 작성 팝업을 바로 표시 (CLAUDE.md의 플로우대로)
     showDescriptionModal();
     
-    // 기존 입력 필드도 유지 (팝업 대안)
-    const descInput = document.getElementById('description-input');
-    const submitBtn = document.getElementById('submit-description-btn');
+    // 모달 내 입력 필드 초기화
+    const modalDescInput = document.getElementById('modal-description-input');
+    if (modalDescInput) {
+        modalDescInput.value = '';
+        modalDescInput.disabled = false;
+    }
     
-    // 강제 초기화
-    descInput.value = '';
-    descInput.disabled = false;
-    submitBtn.disabled = true;
+    // 모달 글자 수 카운터 초기화
+    const modalCharCount = document.getElementById('modal-desc-char-count');
+    if (modalCharCount) {
+        modalCharCount.textContent = '0';
+    }
     
-    // 글자 수 카운터 초기화
-    document.getElementById('desc-char-count').textContent = '0';
-    
-    // 이벤트 리스너가 제대로 바인딩되어 있는지 확인
-    if (!descInput.hasAttribute('data-listener-bound')) {
-        descInput.addEventListener('input', handleDescriptionInput);
-        descInput.setAttribute('data-listener-bound', 'true');
+    // 모달 이벤트 리스너 바인딩 확인
+    if (modalDescInput && !modalDescInput.hasAttribute('data-listener-bound')) {
+        modalDescInput.addEventListener('input', handleDescriptionInput);
+        modalDescInput.setAttribute('data-listener-bound', 'true');
     }
 }
 
@@ -246,8 +380,18 @@ function hideMyTurnBadge() {
 // 설명 입력 처리
 function handleDescriptionInput(e) {
     const count = e.target.value.length;
-    document.getElementById('desc-char-count').textContent = count;
-    document.getElementById('submit-description-btn').disabled = count === 0;
+    
+    // 모달 내 글자수 카운터 업데이트
+    const charCount = document.getElementById('modal-desc-char-count');
+    if (charCount) {
+        charCount.textContent = count;
+    }
+    
+    // 모달 내 제출 버튼 활성화/비활성화
+    const submitBtn = document.getElementById('modal-submit-description-btn');
+    if (submitBtn) {
+        submitBtn.disabled = count === 0;
+    }
 }
 
 // 최후진술 입력 처리
@@ -269,14 +413,40 @@ function showDescriptionCompletePhase() {
     if (AppState.playerInfo.isHost) {
         hostControls.classList.remove('hidden');
         waitingMessage.classList.add('hidden');
+        
+        // 호스트에게 명확한 안내 메시지 표시
+        showNotification('호스트님, 다음 단계를 선택해주세요: 투표 시작 또는 추가 설명');
+        
+        // 호스트 컨트롤 버튼에 설명 추가
+        enhanceHostControls();
     } else {
         hostControls.classList.add('hidden');
         waitingMessage.classList.remove('hidden');
+        
+        // 일반 플레이어에게 대기 메시지
+        const phaseInfo = document.getElementById('phase-info');
+        phaseInfo.textContent = '호스트가 다음 단계를 결정하는 중...';
     }
     
     // 모든 설명 보기 팝업 표시 (CLAUDE.md의 플로우대로)
     if (AppState.gameState && AppState.gameState.messages) {
         showAllDescriptionsModal(AppState.gameState.messages);
+    }
+}
+
+// 호스트 컨트롤 버튼 강화
+function enhanceHostControls() {
+    const startVotingBtn = document.getElementById('start-voting-btn');
+    const continueDescBtn = document.getElementById('continue-description-btn');
+    
+    if (startVotingBtn) {
+        startVotingBtn.innerHTML = '🗳️ 투표 시작';
+        startVotingBtn.title = '라이어를 찾기 위한 투표를 시작합니다';
+    }
+    
+    if (continueDescBtn) {
+        continueDescBtn.innerHTML = '📝 추가 설명 받기';
+        continueDescBtn.title = '플레이어들이 단어에 대해 추가로 설명하게 합니다';
     }
 }
 
@@ -583,6 +753,11 @@ function resetForm(formId) {
 function limitTextInput(inputId, maxLength, counterId) {
     const input = document.getElementById(inputId);
     const counter = document.getElementById(counterId);
+    
+    // 요소가 존재하지 않으면 함수 종료
+    if (!input || !counter) {
+        return;
+    }
     
     input.addEventListener('input', function() {
         const currentLength = this.value.length;
