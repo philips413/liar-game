@@ -8,17 +8,20 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', Arial, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     color: #333;
-    line-height: 1.6;
+    line-height: 1.4;
+    font-size: 0.9rem;
 }
 
 #app {
     width: 100%;
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 /* 화면 전환 */
@@ -26,9 +29,11 @@ body {
     display: block;
     width: 100%;
     max-width: 600px;
+    height: 100vh;
     margin: 0 auto;
-    padding: 20px;
+    padding: 15px;
     animation: fadeIn 0.3s ease-in-out;
+    overflow-y: auto;
 }
 
 .screen.hidden {
@@ -44,56 +49,59 @@ body {
 .container {
     background: white;
     border-radius: 20px;
-    padding: 30px;
+    padding: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     width: 100%;
+    min-height: calc(100vh - 30px);
+    display: flex;
+    flex-direction: column;
 }
 
 /* 타이틀 */
 .title {
     text-align: center;
-    font-size: 2.5rem;
+    font-size: 1.8rem;
     font-weight: 700;
     color: #5a67d8;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 h2 {
     text-align: center;
-    font-size: 1.8rem;
+    font-size: 1.4rem;
     font-weight: 600;
     color: #4a5568;
-    margin-bottom: 25px;
+    margin-bottom: 15px;
 }
 
 h3 {
-    font-size: 1.4rem;
+    font-size: 1.1rem;
     font-weight: 600;
     color: #2d3748;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     text-align: center;
 }
 
 /* 폼 스타일 */
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 label {
     display: block;
     font-weight: 600;
     color: #4a5568;
-    margin-bottom: 8px;
-    font-size: 1rem;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
 }
 
 input, select, textarea {
     width: 100%;
-    padding: 15px;
+    padding: 12px;
     border: 2px solid #e2e8f0;
     border-radius: 10px;
-    font-size: 1rem;
+    font-size: 0.9rem;
     transition: border-color 0.3s ease;
     background: white;
 }
@@ -120,16 +128,16 @@ textarea {
 /* 버튼 스타일 */
 .btn {
     display: inline-block;
-    padding: 15px 30px;
+    padding: 12px 24px;
     border: none;
     border-radius: 10px;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
     text-decoration: none;
-    min-height: 50px;
+    min-height: 44px;
     width: 100%;
 }
 
@@ -163,22 +171,22 @@ textarea {
 .button-group {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    margin-top: 25px;
+    gap: 10px;
+    margin-top: 15px;
 }
 
 /* 방 정보 */
 .room-info {
     background: #f7fafc;
-    padding: 20px;
+    padding: 15px;
     border-radius: 10px;
-    margin-bottom: 25px;
+    margin-bottom: 15px;
     border: 1px solid #e2e8f0;
 }
 
 .room-info p {
-    margin-bottom: 10px;
-    font-size: 1.1rem;
+    margin-bottom: 8px;
+    font-size: 1rem;
 }
 
 .room-code {
@@ -200,13 +208,16 @@ textarea {
 /* 플레이어 목록 */
 .players-section h3 {
     text-align: left;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
+    font-size: 1rem;
 }
 
 .players-list {
     display: grid;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 8px;
+    margin-bottom: 15px;
+    max-height: 200px;
+    overflow-y: auto;
 }
 
 .player-item {
@@ -214,8 +225,8 @@ textarea {
     align-items: center;
     justify-content: space-between;
     background: white;
-    padding: 15px;
-    border-radius: 10px;
+    padding: 10px;
+    border-radius: 8px;
     border: 2px solid #e2e8f0;
     transition: all 0.3s ease;
 }
@@ -232,7 +243,7 @@ textarea {
 
 .player-name {
     font-weight: 600;
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 .player-badge {
@@ -258,33 +269,34 @@ textarea {
     justify-content: space-between;
     align-items: center;
     background: #f7fafc;
-    padding: 15px 20px;
+    padding: 10px 15px;
     border-radius: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     border: 1px solid #e2e8f0;
+    flex-shrink: 0;
 }
 
 .round-info {
     font-weight: 700;
     color: #2d3748;
-    font-size: 1.2rem;
+    font-size: 1rem;
 }
 
 .phase-info {
     background: #5a67d8;
     color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.9rem;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
     font-weight: 600;
 }
 
 /* 내 정보 */
 .my-info {
     background: linear-gradient(45deg, #eef2ff, #fff);
-    padding: 25px;
+    padding: 15px;
     border-radius: 15px;
-    margin-bottom: 25px;
+    margin-bottom: 15px;
     border: 3px solid #5a67d8;
     text-align: center;
     box-shadow: 0 6px 20px rgba(90, 103, 216, 0.25);
@@ -308,18 +320,18 @@ textarea {
 }
 
 .my-nickname {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 600;
     color: #2d3748;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .my-role {
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     font-weight: 800;
-    margin-bottom: 15px;
-    padding: 12px 20px;
-    border-radius: 25px;
+    margin-bottom: 10px;
+    padding: 10px 16px;
+    border-radius: 20px;
     display: inline-block;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
     animation: roleReveal 0.8s ease-out;
@@ -356,18 +368,18 @@ textarea {
 }
 
 .my-word {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 800;
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
-    padding: 15px 20px;
+    padding: 12px 16px;
     border-radius: 12px;
-    border: 3px solid #5a67d8;
+    border: 2px solid #5a67d8;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     animation: wordReveal 1s ease-out 0.3s both;
     display: inline-block;
-    min-width: 200px;
+    min-width: 150px;
 }
 
 .my-word.liar-word {
@@ -530,7 +542,8 @@ textarea {
 
 /* 게임 단계 */
 .game-phase {
-    margin-bottom: 25px;
+    margin-bottom: 15px;
+    flex-shrink: 0;
 }
 
 .game-phase.hidden {
@@ -743,10 +756,11 @@ textarea {
 /* 플레이어 사이드바 */
 .players-sidebar {
     background: #f7fafc;
-    padding: 15px;
+    padding: 10px;
     border-radius: 10px;
-    margin-top: 25px;
+    margin-top: 15px;
     border: 1px solid #e2e8f0;
+    flex-shrink: 0;
 }
 
 .players-sidebar h4 {
@@ -1254,10 +1268,11 @@ textarea {
     background: #ffffff;
     border: 2px solid #ddd;
     border-radius: 12px;
-    margin: 20px 0;
-    height: 300px;
+    margin: 15px 0;
+    height: 200px;
     overflow: hidden;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    flex-shrink: 0;
 }
 
 .chat-messages {
@@ -1307,25 +1322,26 @@ textarea {
 /* 설명 입력 섹션 */
 .description-input-section {
     background: #f8f9fa;
-    padding: 20px;
+    padding: 15px;
     border-radius: 12px;
     border: 2px solid #e9ecef;
-    margin-top: 20px;
+    margin-top: 15px;
+    flex-shrink: 0;
 }
 
 .description-input-section .input-group {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .description-input-section textarea {
     width: 100%;
-    padding: 15px;
+    padding: 12px;
     border: 2px solid #ddd;
     border-radius: 8px;
-    font-size: 1.1rem;
-    line-height: 1.5;
-    resize: vertical;
-    min-height: 80px;
+    font-size: 1rem;
+    line-height: 1.4;
+    resize: none;
+    height: 70px;
     font-family: inherit;
 }
 
@@ -1344,8 +1360,8 @@ textarea {
 
 .description-input-section .btn {
     width: 100%;
-    padding: 15px;
-    font-size: 1.2rem;
+    padding: 12px;
+    font-size: 1rem;
     font-weight: bold;
 }
 
