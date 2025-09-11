@@ -247,6 +247,7 @@ public class GameRoomService {
                 .isHost(player.getIsHost())
                 .isAlive(player.getIsAlive())
                 .orderNo(player.getOrderNo())
+                .role(player.getRole() != null ? player.getRole().name() : null)
                 .cardWord(player.getCardWord())
                 .isCurrentTurn(false)
                 .build();

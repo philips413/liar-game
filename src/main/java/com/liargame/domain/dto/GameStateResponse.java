@@ -36,6 +36,7 @@ public class GameStateResponse {
         private Boolean isHost;
         private Boolean isAlive;
         private Integer orderNo;
+        private String role;
         private String cardWord;
         private Boolean isCurrentTurn;
     }
