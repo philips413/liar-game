@@ -46,11 +46,10 @@ public class GamePlayController {
     @PostMapping("/final-defense")
     public ResponseEntity<Map<String, String>> submitFinalDefense(
             @PathVariable String roomCode,
-            @RequestParam Long playerId,
-            @RequestBody Map<String, String> request) {
+            @RequestParam String playerId,
+            @RequestParam String text) {
         try {
-            String defense = request.get("text");
-            gamePlayService.submitFinalDefense(roomCode, playerId, defense);
+            gamePlayService.submitFinalDefense(roomCode, Long.valueOf(playerId), text);
             return ResponseEntity.ok(Map.of("message", "최후진술이 제출되었습니다"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

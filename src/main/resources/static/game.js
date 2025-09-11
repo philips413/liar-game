@@ -259,15 +259,51 @@ function handleAllDescriptionsComplete(data) {
 // 투표 결과 처리
 function handleVoteResult(data) {
     const gameData = data.data || data;
-    console.log('투표 결과:', gameData);
+    console.log('=== 투표 결과 처리 시작 ===');
+    console.log('원본 데이터:', data);
+    console.log('처리할 데이터:', gameData);
+    console.log('현재 플레이어 정보:', AppState.playerInfo);
     
+    // 먼저 투표 결과를 표시
     displayVoteResult(gameData);
+    
+    // 지목자가 있으면 최후진술 팝업 자동 표시
+    if (gameData.accusedName && gameData.accusedId) {
+        const accusedPlayer = {
+            playerId: gameData.accusedId,
+            nickname: gameData.accusedName
+        };
+        
+        console.log('지목자 정보:', accusedPlayer);
+        console.log('현재 플레이어 ID:', AppState.playerInfo.id);
+        
+        // 3초 후에 최후진술 팝업 표시 (투표 결과를 보여준 후)
+        setTimeout(() => {
+            if (gameData.accusedId === AppState.playerInfo.id) {
+                // 지목된 플레이어가 본인인 경우 최후진술 모달 표시
+                console.log('지목된 플레이어가 본인임 - 최후진술 모달 표시');
+                showFinalDefenseModal();
+            }
+            // 최후진술 단계 화면으로 전환
+            showFinalDefensePhase(accusedPlayer);
+        }, 3000);
+    } else {
+        console.log('지목자 없음 또는 데이터 누락:', {
+            accusedName: gameData.accusedName,
+            accusedId: gameData.accusedId
+        });
+    }
 }
 
 // 최후진술 완료 처리
 function handleFinalDefenseComplete(data) {
     const gameData = data.data || data;
     console.log('최후진술 완료:', gameData);
+    
+    // 모든 플레이어에게 최후진술 내용을 모달로 표시
+    if (gameData.finalDefenseText && gameData.accusedPlayer) {
+        showFinalDefenseResultModal(gameData.accusedPlayer, gameData.finalDefenseText);
+    }
     
     showFinalDefenseCompletePhase(gameData);
 }
@@ -539,6 +575,91 @@ async function handleVoteSubmit(targetPlayerId) {
     }
 }
 
+// 최후진술 모달 표시
+function showFinalDefenseModal() {
+    console.log('최후진술 모달 표시');
+    
+    // 모달 입력 필드 초기화
+    const modalInput = document.getElementById('modal-final-defense-input');
+    const charCount = document.getElementById('modal-final-char-count');
+    const submitBtn = document.getElementById('modal-submit-final-defense-btn');
+    
+    if (modalInput) {
+        modalInput.value = '';
+        modalInput.disabled = false;
+    }
+    if (charCount) {
+        charCount.textContent = '0';
+    }
+    if (submitBtn) {
+        submitBtn.disabled = true;
+    }
+    
+    // 이벤트 리스너 바인딩
+    if (modalInput && !modalInput.hasAttribute('data-final-modal-bound')) {
+        modalInput.addEventListener('input', handleModalFinalDefenseInput);
+        modalInput.setAttribute('data-final-modal-bound', 'true');
+    }
+    
+    if (submitBtn && !submitBtn.hasAttribute('data-final-modal-bound')) {
+        submitBtn.addEventListener('click', handleModalFinalDefenseSubmit);
+        submitBtn.setAttribute('data-final-modal-bound', 'true');
+    }
+    
+    // 모달 표시
+    showModal('final-defense-modal');
+}
+
+// 최후진술 모달 입력 처리
+function handleModalFinalDefenseInput(e) {
+    const count = e.target.value.length;
+    
+    const charCount = document.getElementById('modal-final-char-count');
+    const submitBtn = document.getElementById('modal-submit-final-defense-btn');
+    
+    if (charCount) {
+        charCount.textContent = count;
+    }
+    
+    if (submitBtn) {
+        submitBtn.disabled = count === 0;
+    }
+}
+
+// 최후진술 모달 제출 처리
+async function handleModalFinalDefenseSubmit() {
+    const modalInput = document.getElementById('modal-final-defense-input');
+    const finalDefenseText = modalInput.value.trim();
+    
+    if (!finalDefenseText) {
+        showNotification('최후진술을 입력해주세요.');
+        return;
+    }
+    
+    console.log('최후진술 제출:', finalDefenseText);
+    
+    try {
+        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/final-defense?playerId=${AppState.playerInfo.id}&text=${encodeURIComponent(finalDefenseText)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('최후진술 제출에 실패했습니다.');
+        }
+        
+        // 모달 닫기
+        hideModal('final-defense-modal');
+        showNotification('최후진술이 제출되었습니다!');
+        
+    } catch (error) {
+        console.error('최후진술 제출 오류:', error);
+        showNotification(error.message);
+    }
+}
+
 // 최후진술 제출
 async function handleSubmitFinalDefense() {
     const finalDefenseText = document.getElementById('final-defense-input').value.trim();
@@ -614,15 +735,11 @@ async function handleFinalVote(decision) {
     try {
         console.log('최후진술 투표 제출:', { decision, playerId: AppState.playerInfo.id, roomCode: AppState.roomInfo.code });
         
-        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/actions/final-vote`, {
+        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/actions/final-vote?playerId=${AppState.playerInfo.id}&decision=${decision}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                playerId: AppState.playerInfo.id,
-                decision: decision
-            })
+            }
         });
         
         console.log('최후진술 투표 응답:', response.status, response.statusText);

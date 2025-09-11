@@ -184,7 +184,7 @@ public class GamePlayService {
             throw new RuntimeException("지목된 플레이어만 최후진술을 할 수 있습니다");
         }
         
-        MessageLog message = MessageLog.builder()
+        MessageLog messageLog = MessageLog.builder()
                 .roomId(room.getRoomId())
                 .round(currentRound)
                 .player(player)
@@ -193,7 +193,7 @@ public class GamePlayService {
                 .summary(generateSummary(defense))
                 .build();
         
-        messageLogRepository.save(message);
+        messageLogRepository.save(messageLog);
         
         logAudit(room.getRoomId(), playerId, "FINAL_DEFENSE", defense);
         
@@ -201,13 +201,15 @@ public class GamePlayService {
         currentRound.setState(Round.RoundState.FINAL_DEFENSE_COMPLETE);
         roundRepository.save(currentRound);
         
-        // 브로드캐스트 - 최후진술 완료
-        broadcastRoundStateChange(roomCode, "FINAL_DEFENSE_COMPLETE", Map.of(
+        // 브로드캐스트 - 최후진술 완료 (최후진술 내용 포함)
+        GameMessage broadcastMessage = GameMessage.of("FINAL_DEFENSE_COMPLETE", roomCode, Map.of(
             "accusedPlayer", Map.of(
                 "playerId", player.getPlayerId(),
                 "nickname", player.getNickname()
-            )
+            ),
+            "finalDefenseText", defense
         ));
+        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, broadcastMessage);
     }
     
     public void startFinalVoting(String roomCode, Long hostId) {

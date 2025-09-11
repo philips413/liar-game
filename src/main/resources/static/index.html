@@ -282,6 +282,25 @@
                 </div>
             </div>
         </div>
+
+        <!-- 최후진술 팝업 -->
+        <div id="final-defense-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🎭 최후진술</h3>
+                    <p>지목되었습니다. 최후진술을 작성해주세요!</p>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <textarea id="modal-final-defense-input" placeholder="최후진술을 작성해주세요..." maxlength="300"></textarea>
+                        <div class="char-count"><span id="modal-final-char-count">0</span>/300</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="modal-submit-final-defense-btn" class="btn btn-primary">최후진술 완료</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/game.js?v=2"></script>

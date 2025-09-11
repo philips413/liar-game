@@ -563,6 +563,8 @@ function displayVoteResult(data) {
         accusedMessage.className = 'vote-result-summary';
         accusedMessage.innerHTML = `<p><strong>${data.accusedName}님이 지목되었습니다!</strong></p>`;
         modalContent.appendChild(accusedMessage);
+        
+        console.log('투표 결과 - 지목자:', data.accusedName, '지목자 ID:', data.accusedId);
     } else {
         const noAccusedMessage = document.createElement('div');
         noAccusedMessage.className = 'vote-result-summary';
@@ -624,6 +626,61 @@ function showFinalDefensePhase(accusedPlayer) {
             finalDefenseForm.classList.add('hidden');
             finalDefenseWaiting.classList.remove('hidden');
         }
+    }
+}
+
+// 최후진술 결과 모달 표시 (모든 플레이어에게)
+function showFinalDefenseResultModal(accusedPlayer, finalDefenseText) {
+    console.log('최후진술 결과 모달 표시:', accusedPlayer.nickname, finalDefenseText);
+    
+    // 기존 모달들 모두 닫기
+    hideAllModals();
+    
+    const modalHTML = `
+        <div id="final-defense-result-modal" class="modal-overlay" style="display: flex;">
+            <div class="modal-content" style="text-align: center; padding: 30px; max-width: 500px;">
+                <div style="font-size: 24px; margin-bottom: 20px;">⚖️</div>
+                <h3 style="color: #e74c3c; margin-bottom: 20px;">최후진술</h3>
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 15px; color: #495057;">
+                        🎯 ${accusedPlayer.nickname}님의 최후진술
+                    </h4>
+                    <div style="background-color: white; padding: 15px; border-radius: 6px; border-left: 4px solid #e74c3c;">
+                        <p style="font-size: 16px; line-height: 1.5; margin: 0; text-align: left;">
+                            "${finalDefenseText}"
+                        </p>
+                    </div>
+                </div>
+                <div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="font-size: 14px; color: #1976d2; margin: 0;">
+                        호스트가 생존/사망 투표를 시작할 때까지 기다려주세요
+                    </p>
+                </div>
+                <button onclick="hideFinalDefenseResultModal()" 
+                        class="modal-btn primary-btn" 
+                        style="width: 100%; padding: 12px;">
+                    확인
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // 3초 후 자동 닫기 (사용자가 직접 닫지 않은 경우)
+    setTimeout(() => {
+        const modal = document.getElementById('final-defense-result-modal');
+        if (modal) {
+            hideFinalDefenseResultModal();
+        }
+    }, 5000);
+}
+
+// 최후진술 결과 모달 닫기
+function hideFinalDefenseResultModal() {
+    const modal = document.getElementById('final-defense-result-modal');
+    if (modal) {
+        modal.remove();
     }
 }
 
