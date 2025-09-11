@@ -350,11 +350,10 @@ function updateGamePhaseDisplay(data) {
                 phaseInfo.textContent = '설명 작성 단계';
                 break;
             case 'DESC_COMPLETE':
-                phaseInfo.textContent = '설명 완료 - 호스트 대기 중';
+                phaseInfo.textContent = '설명 완료';
                 break;
             case 'VOTE':
                 phaseInfo.textContent = '투표 진행 중';
-                // 호스트가 아닌 플레이어도 투표 화면 표시
                 showVotingPhase(data.players || AppState.players);
                 break;
             case 'FINAL_DEFENSE':
@@ -554,8 +553,12 @@ function showDescriptionCompletePhase() {
     const waitingMessage = document.getElementById('waiting-host-decision');
     
     if (AppState.playerInfo.isHost) {
-        hostControls.classList.remove('hidden');
-        waitingMessage.classList.add('hidden');
+        if (hostControls) {
+            hostControls.classList.remove('hidden');
+        }
+        if (waitingMessage) {
+            waitingMessage.classList.add('hidden');
+        }
 
         // 호스트에게 명확한 안내 메시지 표시 (한 번만)
         addSystemMessage('모든 플레이어의 설명이 완료되었습니다. 호스트가 다음 단계를 결정해주세요.', 'description');
@@ -563,12 +566,18 @@ function showDescriptionCompletePhase() {
         // 호스트 컨트롤 버튼에 설명 추가
         enhanceHostControls();
     } else {
-        hostControls.classList.add('hidden');
-        waitingMessage.classList.remove('hidden');
+        if (hostControls) {
+            hostControls.classList.add('hidden');
+        }
+        if (waitingMessage) {
+            waitingMessage.classList.remove('hidden');
+        }
         
         // 일반 플레이어에게 대기 메시지
         const phaseInfo = document.getElementById('phase-info');
-        phaseInfo.textContent = '호스트가 다음 단계를 결정하는 중...';
+        if (phaseInfo) {
+            phaseInfo.textContent = '호스트가 다음 단계를 결정하는 중...';
+        }
     }
 }
 
@@ -626,7 +635,6 @@ function showVotingPhase(players) {
     votingPlayersElement.innerHTML = alivePlayers.map(player => `
         <div class="vote-player-card" data-player-id="${player.playerId}" onclick="handleVoteClick(${player.playerId})">
             <div class="vote-player-name">${player.nickname}</div>
-            <div class="vote-count" id="vote-count-${player.playerId}">0표</div>
         </div>
     `).join('');
 }
@@ -656,10 +664,6 @@ function handleVoteClick(targetPlayerId) {
 // 투표 결과 표시
 function displayVoteResult(data) {
     const modalContent = document.getElementById('vote-result-content');
-
-    console.log("===========asdads");
-    console.log(data);
-    console.log("===========asdads");
 
     if (data.results && data.results.length > 0) {
         modalContent.innerHTML = data.results.map(result => `

@@ -302,7 +302,10 @@ function handleVoteResult(data) {
     console.log('처리할 데이터:', gameData);
     console.log('현재 플레이어 정보:', AppState.playerInfo);
     
-    // 먼저 투표 결과를 표시
+    // 채팅창에 투표 결과 표시
+    displayVoteResultInChat(gameData);
+    
+    // 모달도 표시 (기존 기능 유지)
     displayVoteResult(gameData);
     
     // 지목자가 있으면 최후진술 팝업 자동 표시
@@ -602,8 +605,6 @@ async function handleVoteSubmit(targetPlayerId) {
             card.classList.add('disabled');
             card.style.pointerEvents = 'none';
         });
-        
-        showNotification('투표가 완료되었습니다.');
         
     } catch (error) {
         console.error('투표 제출 오류:', error);
@@ -924,7 +925,73 @@ function handleContinueDescriptionPhase(data) {
     const gameData = data.data || data;
     console.log('추가 설명 단계 웹소켓 메시지:', gameData);
     
+    // 모든 플레이어에게 추가 설명 기회 제공
     addSystemMessage('추가 설명 단계를 시작합니다. 다시 한 번 단어에 대해 설명해주세요.', 'description');
+    
+    // UI 상태 초기화 - 모든 플레이어가 다시 설명할 수 있도록
+    resetDescriptionPhase();
+    
+    // 설명 완료 단계 숨기고 일반 게임 화면으로 복귀
+    hideAllGamePhases();
+    showDescriptionPhaseWithoutModal();
+    
+    // phase-info 업데이트
+    const phaseInfo = document.getElementById('phase-info');
+    if (phaseInfo) {
+        phaseInfo.textContent = '추가 설명 단계 - 다시 한 번 설명해주세요';
+    }
+}
+
+// 설명 단계 UI 상태 초기화 함수
+function resetDescriptionPhase() {
+    // 설명 입력 필드 초기화 및 활성화
+    const descriptionInput = document.getElementById('description-input');
+    const submitBtn = document.getElementById('submit-description-btn');
+    
+    if (descriptionInput) {
+        descriptionInput.value = '';
+        descriptionInput.disabled = false;
+        descriptionInput.placeholder = '받은 단어에 대해 다시 설명해주세요...';
+    }
+    
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '단어 설명';
+        submitBtn.style.display = 'block';
+    }
+    
+    // 문자 카운터 초기화
+    const charCount = document.getElementById('desc-char-count');
+    if (charCount) {
+        charCount.textContent = '0';
+    }
+}
+
+// 투표 결과를 채팅창에 표시
+function displayVoteResultInChat(gameData) {
+    // 투표 결과 정보 구성
+    let resultMessage = '🗳️ 투표 결과\n\n';
+    console.log(gameData)
+    if (gameData.voteResults && gameData.voteResults.length > 0) {
+        // 투표 결과를 득표수 순으로 정렬
+        const sortedResults = gameData.voteResults.sort((a, b) => b.voteCount - a.voteCount);
+        
+        sortedResults.forEach(result => {
+            resultMessage += `${result.targetName}: ${result.voteCount}표\n`;
+        });
+        
+        if (gameData.accusedName && gameData.accusedId) {
+            resultMessage += `\n👉 ${gameData.accusedName}님이 최다 득표로 지목되었습니다.`;
+            resultMessage += `\n최후진술을 기다리고 있습니다.`;
+        } else {
+            resultMessage += `\n과반수 득표자가 없어 다음 라운드로 진행합니다.`;
+        }
+    } else {
+        resultMessage += '투표 결과가 없습니다.';
+    }
+    
+    // 채팅창에 시스템 메시지로 추가
+    addSystemMessage(resultMessage, 'vote-result');
 }
 
 // 다음 라운드 시작 WebSocket 핸들러

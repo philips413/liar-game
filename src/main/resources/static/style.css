@@ -1105,7 +1105,6 @@ textarea {
     background: linear-gradient(45deg, #667eea, #764ba2);
     color: white;
     border-radius: 15px;
-    margin-bottom: 25px;
     letter-spacing: 1px;
 }
 
@@ -1148,7 +1147,6 @@ textarea {
     padding: 20px;
     border-radius: 15px;
     text-align: center;
-    margin: 20px 0;
     border: 3px solid #FFD700;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
@@ -1437,8 +1435,8 @@ textarea {
     background: #ffffff;
     border: 2px solid #ddd;
     border-radius: 12px;
-    margin: 15px 0;
-    height: 300px;
+    margin: 10px 0;
+    height: 350px;
     overflow: hidden;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     flex-shrink: 0;
@@ -1527,6 +1525,15 @@ textarea {
     box-shadow: 0 2px 8px rgba(255, 234, 167, 0.3);
 }
 
+.chat-message.system-message.vote-result {
+    background: linear-gradient(135deg, #74b9ff, #0984e3);
+    color: white;
+    box-shadow: 0 2px 8px rgba(116, 185, 255, 0.3);
+    white-space: pre-line;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
 .system-icon {
     font-size: 1.2rem;
     flex-shrink: 0;
@@ -1565,7 +1572,6 @@ textarea {
     padding: 15px;
     border-radius: 12px;
     border: 2px solid #e9ecef;
-    margin-top: 15px;
     flex-shrink: 0;
 }
 
