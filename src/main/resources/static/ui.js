@@ -205,7 +205,7 @@ async function handleHostStartDescription() {
         showDescriptionPhase();
         // 호스트에게도 설명 팝업 바로 표시
         // showDescriptionModal();
-        showNotification('설명 단계가 시작되었습니다!');
+        // 시스템 메시지는 handleDescriptionPhaseStarted에서 처리됨
         
     } catch (error) {
         console.error('설명 단계 시작 오류:', error);
@@ -272,9 +272,6 @@ function updateMyInfoDisplay() {
                 myRoleElement.style.animation = 'roleReveal 0.8s ease-out';
             }, 100);
         }
-        
-        // 역할 공개 알림 표시
-        showRoleRevealNotification();
     }
     
     // 대기실 역할 정보도 함께 업데이트
@@ -318,49 +315,6 @@ function updateWaitingRoomRoleDisplay() {
     }
 }
 
-// 역할 공개 알림 표시
-function showRoleRevealNotification() {
-    const notification = document.createElement('div');
-    notification.className = 'role-reveal-notification';
-    notification.innerHTML = `
-        <div class="role-reveal-content">
-            <div class="role-reveal-icon">🎭</div>
-            <div class="role-reveal-text">당신의 역할이 공개되었습니다!</div>
-        </div>
-    `;
-    
-    // 스타일 추가
-    notification.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        padding: 20px 30px;
-        border-radius: 15px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        z-index: 10000;
-        text-align: center;
-        font-size: 1.1rem;
-        font-weight: 600;
-        animation: roleNotificationShow 2s ease-out forwards;
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // 3초 후 자동 제거
-    setTimeout(() => {
-        if (notification && notification.parentNode) {
-            notification.style.animation = 'roleNotificationHide 0.5s ease-out forwards';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 500);
-        }
-    }, 3000);
-}
 
 // 게임 플레이어 목록 업데이트
 function updateGamePlayersList() {
@@ -384,9 +338,13 @@ function updateRoundDisplay() {
 function updateGamePhaseDisplay(data) {
     const phaseInfo = document.getElementById('phase-info');
     
-    // 호스트가 아닌 플레이어는 정적 화면 유지
+    // 호스트가 아닌 플레이어도 특정 단계에서는 UI 변경 필요
     if (!AppState.playerInfo.isHost) {
-        // 호스트가 아닌 플레이어는 phase-info만 업데이트
+        // 모든 게임 단계 숨기기
+        document.querySelectorAll('.game-phase').forEach(phase => {
+            phase.classList.add('hidden');
+        });
+
         switch (data.state || AppState.gamePhase) {
             case 'DESC':
                 phaseInfo.textContent = '설명 작성 단계';
@@ -396,6 +354,8 @@ function updateGamePhaseDisplay(data) {
                 break;
             case 'VOTE':
                 phaseInfo.textContent = '투표 진행 중';
+                // 호스트가 아닌 플레이어도 투표 화면 표시
+                showVotingPhase(data.players || AppState.players);
                 break;
             case 'FINAL_DEFENSE':
                 phaseInfo.textContent = '최후진술 단계';
@@ -405,6 +365,8 @@ function updateGamePhaseDisplay(data) {
                 break;
             case 'FINAL_VOTING':
                 phaseInfo.textContent = '생존/사망 투표';
+                // 호스트가 아닌 플레이어도 재투표 화면 표시
+                showFinalVotingPhase(data.accusedPlayer);
                 break;
             case 'ROUND_END':
                 phaseInfo.textContent = '라운드 종료';
@@ -579,6 +541,12 @@ function showDescriptionCompletePhase() {
     }
     
     const descCompletePhase = document.getElementById('description-complete-phase');
+    
+    // 이미 표시된 상태라면 중복 메시지 방지
+    if (!descCompletePhase.classList.contains('hidden')) {
+        return;
+    }
+    
     descCompletePhase.classList.remove('hidden');
     
     // 호스트 전용 컨트롤 표시
@@ -588,10 +556,10 @@ function showDescriptionCompletePhase() {
     if (AppState.playerInfo.isHost) {
         hostControls.classList.remove('hidden');
         waitingMessage.classList.add('hidden');
-        
-        // 호스트에게 명확한 안내 메시지 표시
-        showNotification('호스트님, 다음 단계를 선택해주세요: 투표 시작 또는 추가 설명');
-        
+
+        // 호스트에게 명확한 안내 메시지 표시 (한 번만)
+        addSystemMessage('모든 플레이어의 설명이 완료되었습니다. 호스트가 다음 단계를 결정해주세요.', 'description');
+
         // 호스트 컨트롤 버튼에 설명 추가
         enhanceHostControls();
     } else {
@@ -1046,7 +1014,19 @@ function limitTextInput(inputId, maxLength, counterId) {
         }
         
         // 제출 버튼 활성화/비활성화
-        const submitBtn = this.closest('.game-phase').querySelector('.btn-primary');
+        let submitBtn = null;
+        
+        // description-input의 경우 직접 ID로 찾기
+        if (this.id === 'description-input') {
+            submitBtn = document.getElementById('submit-description-btn');
+        } else {
+            // 다른 입력 필드의 경우 기존 방식 사용
+            const gamePhase = this.closest('.game-phase');
+            if (gamePhase) {
+                submitBtn = gamePhase.querySelector('.btn-primary');
+            }
+        }
+        
         if (submitBtn) {
             submitBtn.disabled = currentLength === 0;
         }
@@ -1142,6 +1122,54 @@ function addChatMessage(senderName, message, isMyMessage = false) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+// 시스템 메시지 추가 함수
+function addSystemMessage(message, messageType = 'info') {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message system-message ${messageType}`;
+    
+    const iconDiv = document.createElement('div');
+    iconDiv.className = 'system-icon';
+    
+    // 메시지 타입에 따른 아이콘 설정
+    switch(messageType) {
+        case 'game-start':
+            iconDiv.textContent = '🎮';
+            break;
+        case 'voting':
+            iconDiv.textContent = '🗳️';
+            break;
+        case 'description':
+            iconDiv.textContent = '📝';
+            break;
+        case 'final-defense':
+            iconDiv.textContent = '⚖️';
+            break;
+        case 'round-end':
+            iconDiv.textContent = '🏁';
+            break;
+        case 'warning':
+            iconDiv.textContent = '⚠️';
+            break;
+        default:
+            iconDiv.textContent = '💬';
+    }
+    
+    const textDiv = document.createElement('div');
+    textDiv.className = 'system-text';
+    textDiv.textContent = message;
+    
+    messageDiv.appendChild(iconDiv);
+    messageDiv.appendChild(textDiv);
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // 스크롤을 최하단으로 이동
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
 // 채팅창 초기화
 function clearChatMessages() {
     const chatMessages = document.getElementById('chat-messages');
@@ -1177,4 +1205,240 @@ document.addEventListener('DOMContentLoaded', function() {
         descInput.addEventListener('input', updateDescriptionInput);
         descInput.addEventListener('keyup', updateDescriptionInput);
     }
+    
+    // 모바일 최적화 초기화
+    initializeMobileOptimizations();
 });
+
+// ===== 모바일 최적화 기능 =====
+
+// 모바일 최적화 초기화
+function initializeMobileOptimizations() {
+    // 터치 이벤트 최적화
+    setupTouchEvents();
+    
+    // 키보드 이벤트 처리
+    setupKeyboardHandling();
+    
+    // 화면 방향 변경 처리
+    setupOrientationHandling();
+    
+    // iOS Safari 뷰포트 높이 이슈 수정
+    fixIOSViewportHeight();
+    
+    // 더블 탭 줌 방지
+    preventDoubleTapZoom();
+}
+
+// 터치 이벤트 최적화
+function setupTouchEvents() {
+    // 버튼들에 터치 피드백 추가
+    document.addEventListener('touchstart', function(e) {
+        if (e.target.matches('.btn, .vote-player-card, .player-item')) {
+            e.target.classList.add('touching');
+        }
+    }, { passive: true });
+    
+    document.addEventListener('touchend', function(e) {
+        if (e.target.matches('.btn, .vote-player-card, .player-item')) {
+            e.target.classList.remove('touching');
+        }
+    }, { passive: true });
+    
+    // 스크롤 성능 최적화
+    let scrollTimer = null;
+    document.addEventListener('scroll', function(e) {
+        if (scrollTimer !== null) {
+            clearTimeout(scrollTimer);
+        }
+        scrollTimer = setTimeout(function() {
+            // 스크롤 완료 후 처리
+            document.body.classList.remove('is-scrolling');
+        }, 150);
+        document.body.classList.add('is-scrolling');
+    }, { passive: true });
+}
+
+// 키보드 이벤트 처리 (모바일 가상 키보드)
+function setupKeyboardHandling() {
+    // 입력 필드 포커스 시 화면 조정
+    const inputs = document.querySelectorAll('input, textarea');
+    
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            // 키보드가 올라올 때를 대비해 약간의 지연 후 스크롤
+            setTimeout(() => {
+                this.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                    inline: 'nearest'
+                });
+            }, 300);
+        });
+        
+        // 모바일에서 엔터 키 처리
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                // 텍스트에어리어가 아닌 경우에만 기본 제출 동작
+                if (this.tagName.toLowerCase() !== 'textarea') {
+                    e.preventDefault();
+                    // 연관된 제출 버튼 찾아서 클릭
+                    const form = this.closest('form');
+                    if (form) {
+                        const submitBtn = form.querySelector('.btn-primary, [type="submit"]');
+                        if (submitBtn && !submitBtn.disabled) {
+                            submitBtn.click();
+                        }
+                    }
+                }
+            }
+        });
+    });
+}
+
+// 화면 방향 변경 처리
+function setupOrientationHandling() {
+    function handleOrientationChange() {
+        // 방향 변경 후 뷰포트 높이 재계산
+        setTimeout(() => {
+            fixIOSViewportHeight();
+        }, 500);
+    }
+    
+    // 방향 변경 이벤트 리스너
+    if ('orientation' in screen) {
+        screen.orientation.addEventListener('change', handleOrientationChange);
+    } else {
+        window.addEventListener('orientationchange', handleOrientationChange);
+    }
+    
+    // 리사이즈 이벤트도 처리
+    let resizeTimer = null;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(handleOrientationChange, 200);
+    });
+}
+
+// iOS Safari 뷰포트 높이 이슈 수정
+function fixIOSViewportHeight() {
+    // iOS Safari에서 주소창 때문에 100vh가 정확하지 않은 문제 해결
+    const viewportHeight = window.innerHeight;
+    document.documentElement.style.setProperty('--vh', `${viewportHeight * 0.01}px`);
+    
+    // CSS에서 height: 100vh 대신 height: calc(var(--vh, 1vh) * 100) 사용
+}
+
+// 더블 탭 줌 방지
+function preventDoubleTapZoom() {
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+}
+
+// 모바일 전용 유틸리티 함수들
+const MobileUtils = {
+    // 디바이스 감지
+    isMobile: function() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    },
+    
+    // iOS 감지
+    isIOS: function() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent);
+    },
+    
+    // 안드로이드 감지
+    isAndroid: function() {
+        return /Android/i.test(navigator.userAgent);
+    },
+    
+    // 키보드 표시 상태 감지
+    isKeyboardVisible: function() {
+        return window.innerHeight < window.screen.height * 0.75;
+    },
+    
+    // 진동 피드백 (지원하는 기기만)
+    vibrate: function(pattern = [100]) {
+        if ('vibrate' in navigator) {
+            navigator.vibrate(pattern);
+        }
+    },
+    
+    // 터치 좌표 정규화
+    getTouchCoordinates: function(e) {
+        const touch = e.touches ? e.touches[0] : e;
+        return {
+            x: touch.clientX,
+            y: touch.clientY
+        };
+    }
+};
+
+// 투표 카드 터치 개선
+function enhanceVoteCardInteraction() {
+    const voteCards = document.querySelectorAll('.vote-player-card');
+    
+    voteCards.forEach(card => {
+        // 터치 시작
+        card.addEventListener('touchstart', function(e) {
+            this.style.transform = 'scale(0.95)';
+            MobileUtils.vibrate([50]); // 짧은 진동 피드백
+        }, { passive: true });
+        
+        // 터치 종료
+        card.addEventListener('touchend', function(e) {
+            this.style.transform = '';
+        }, { passive: true });
+        
+        // 터치 취소
+        card.addEventListener('touchcancel', function(e) {
+            this.style.transform = '';
+        }, { passive: true });
+    });
+}
+
+// 게임 단계별 모바일 최적화
+function optimizeForGamePhase(phase) {
+    switch(phase) {
+        case 'voting':
+            enhanceVoteCardInteraction();
+            break;
+        case 'description':
+            // 텍스트 입력 시 화면 최적화
+            optimizeTextInput();
+            break;
+        case 'final-defense':
+            // 최후진술 입력 최적화
+            optimizeFinalDefenseInput();
+            break;
+    }
+}
+
+// 텍스트 입력 최적화
+function optimizeTextInput() {
+    const textArea = document.querySelector('#description-input, textarea[name="description"]');
+    if (textArea) {
+        // 입력 시 자동 높이 조정
+        textArea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        });
+    }
+}
+
+// 최후진술 입력 최적화
+function optimizeFinalDefenseInput() {
+    const finalDefenseInput = document.getElementById('final-defense-input');
+    if (finalDefenseInput) {
+        finalDefenseInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        });
+    }
+}

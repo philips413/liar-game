@@ -117,6 +117,15 @@ function handleWebSocketMessage(data) {
         case 'FINAL_VOTING':
             handleFinalVotingStart(data);
             break;
+        case 'VOTING_STARTED':
+            handleVotingStarted(data);
+            break;
+        case 'CONTINUE_DESCRIPTION':
+            handleContinueDescriptionPhase(data);
+            break;
+        case 'NEXT_ROUND_START':
+            handleNextRoundStart(data);
+            break;
         case 'DESCRIPTION_PHASE_STARTED':
             handleDescriptionPhaseStarted(data);
             break;
@@ -171,7 +180,7 @@ function handlePlayerLeft(data) {
     
     AppState.players = AppState.players.filter(p => p.playerId !== player.playerId);
     updatePlayersList();
-    showNotification(`${player.nickname}님이 나갔습니다.`);
+    addSystemMessage(`${player.nickname}님이 방을 나갔습니다.`, 'info');
 }
 
 // 방 상태 업데이트 처리
@@ -227,7 +236,6 @@ function handleGameStarted(data) {
     }
     
     showGameScreen();
-    // showNotification('게임이 시작되었습니다!');
 }
 
 // 설명 단계 시작 처리
@@ -256,7 +264,7 @@ function handleDescriptionPhaseStarted(data) {
     
     // 모든 플레이어에게 설명 단계 표시
     showDescriptionPhase();
-    showNotification('설명 단계가 시작되었습니다!');
+    addSystemMessage('설명 단계가 시작되었습니다! 받은 단어에 대해 설명해주세요.', 'description');
 }
 
 // 라운드 상태 업데이트
@@ -283,7 +291,7 @@ function handleAllDescriptionsComplete(data) {
     // showAllDescriptionsModal(gameData.descriptions);
     
     // 호스트에게만 투표 시작 버튼 표시
-    showDescriptionCompletePhase();
+    // showDescriptionCompletePhase();
 }
 
 // 투표 결과 처리
@@ -343,6 +351,7 @@ function handleFinalVotingStart(data) {
     const gameData = data.data || data;
     console.log('재투표 시작:', gameData);
     
+    addSystemMessage('생존/사망 재투표를 시작합니다. 지목된 플레이어의 운명을 결정해주세요.', 'final-defense');
     showFinalVotingPhase(gameData.accusedPlayer);
 }
 
@@ -464,8 +473,7 @@ function updateGameState(gameState) {
         }
         AppState.players = gameState.players;
     }
-    
-    updateMyInfoDisplay();
+
     updateGamePlayersList();
 }
 
@@ -562,7 +570,7 @@ async function handleStartVoting() {
             throw new Error('투표 시작에 실패했습니다.');
         }
         
-        showNotification('투표를 진행하겠습니다.');
+        // 시스템 메시지는 WebSocket 응답에서 처리됨
         
     } catch (error) {
         console.error('투표 시작 오류:', error);
@@ -741,7 +749,7 @@ async function handleStartFinalVoting() {
             throw new Error('재투표 시작에 실패했습니다.');
         }
         
-        showNotification('생존/사망 투표를 시작합니다.');
+        // 시스템 메시지는 WebSocket 응답에서 처리됨
         
     } catch (error) {
         console.error('재투표 시작 오류:', error);
@@ -864,7 +872,7 @@ async function handleContinueDescription() {
             throw new Error(errorData.error || '설명 계속하기에 실패했습니다.');
         }
         
-        showNotification('설명 단계가 계속됩니다.');
+        // 시스템 메시지는 WebSocket 응답에서 처리됨
         
     } catch (error) {
         console.error('설명 계속하기 오류:', error);
@@ -889,12 +897,43 @@ async function handleProceedNextRound() {
             throw new Error(errorData.error || '다음 라운드 진행에 실패했습니다.');
         }
         
-        showNotification('다음 라운드가 시작됩니다.');
+        // 시스템 메시지는 WebSocket 응답에서 처리됨
         
     } catch (error) {
         console.error('다음 라운드 진행 오류:', error);
         showNotification(error.message || '다음 라운드 진행 중 오류가 발생했습니다.');
     }
+}
+
+// 투표 시작 WebSocket 핸들러
+function handleVotingStarted(data) {
+    const gameData = data.data || data;
+    console.log('투표 시작 웹소켓 메시지:', gameData);
+    
+    addSystemMessage('투표를 시작합니다! 라이어를 찾아 투표해주세요.', 'voting');
+    
+    // 모든 플레이어에게 투표 화면 표시
+    if (gameData.players || AppState.players) {
+        const players = gameData.players || AppState.players;
+        showVotingPhase(players);
+    }
+}
+
+// 추가 설명 단계 WebSocket 핸들러
+function handleContinueDescriptionPhase(data) {
+    const gameData = data.data || data;
+    console.log('추가 설명 단계 웹소켓 메시지:', gameData);
+    
+    addSystemMessage('추가 설명 단계를 시작합니다. 다시 한 번 단어에 대해 설명해주세요.', 'description');
+}
+
+// 다음 라운드 시작 WebSocket 핸들러
+function handleNextRoundStart(data) {
+    const gameData = data.data || data;
+    console.log('다음 라운드 시작 웹소켓 메시지:', gameData);
+    
+    const nextRound = gameData.currentRound || AppState.roomInfo.currentRound;
+    addSystemMessage(`다음 라운드(${nextRound}라운드)가 시작됩니다!`, 'round-end');
 }
 
 // WebSocket 연결 해제

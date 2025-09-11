@@ -37,10 +37,10 @@
                     <div class="form-group">
                         <label for="max-players">최대 인원</label>
                         <select id="max-players">
-                            <option value="3">3명</option>
+                            <option value="3" selected>3명</option>
                             <option value="4">4명</option>
                             <option value="5">5명</option>
-                            <option value="6" selected>6명</option>
+                            <option value="6">6명</option>
                             <option value="8">8명</option>
                             <option value="10">10명</option>
                         </select>
@@ -48,9 +48,9 @@
                     <div class="form-group">
                         <label for="round-limit">라운드 수</label>
                         <select id="round-limit">
-                            <option value="1" >1라운드</option>
-                            <option value="2" selected>2라운드</option>
-                            <option value="3">3라운드</option>
+                            <option value="1" selected>1라운드</option>
+                            <option value="2" >2라운드</option>
+                            <option value="3" >3라운드</option>
                         </select>
                     </div>
                     <div class="button-group">
@@ -87,7 +87,12 @@
             <div class="container">
                 <h2>대기실</h2>
                 <div class="room-info">
-                    <p>방 코드: <span id="waiting-room-code" class="room-code"></span></p>
+                    <div class="room-code-section">
+                        <p>방 코드: <span id="waiting-room-code" class="room-code"></span></p>
+                        <button id="copy-room-code-btn" class="btn btn-copy" title="방 코드 복사">
+                            📋 복사
+                        </button>
+                    </div>
                     <p>내 닉네임: <span id="my-nickname" class="nickname"></span></p>
                 </div>
 
@@ -127,18 +132,16 @@
                     </div>
                 </div>
 
+                <!-- 설명 입력 (항상 표시) -->
+                <div class="description-input-section" id="permanent-description-input">
+                    <div class="input-group inline-input">
+                        <input type="text" id="description-input" placeholder="받은 단어에 대해 설명해주세요..." maxlength="200" />
+                        <button id="submit-description-btn" class="btn btn-primary" style="height: 100%; min-height: 100%">단어 설명</button>
+                    </div>
+                </div>
+
                 <!-- 설명 작성 단계 -->
                 <div id="description-phase" class="game-phase hidden">
-                    <h3>단어에 대해 설명해주세요</h3>
-                    
-                    <!-- 설명 입력 부분 -->
-                    <div class="description-input-section">
-                        <div class="input-group">
-                            <textarea id="description-input" placeholder="받은 단어에 대해 설명해주세요..." maxlength="200"></textarea>
-                            <div class="char-count"><span id="desc-char-count">0</span>/200</div>
-                        </div>
-                        <button id="submit-description-btn" class="btn btn-primary">단어 설명</button>
-                    </div>
                 </div>
 
                 <!-- 설명 완료 대기 -->

@@ -97,15 +97,15 @@ public class GamePlayService {
                 });
         System.out.println("라운드 찾음: " + currentRound.getRoundId() + ", 상태: " + currentRound.getState());
         
-        if (currentRound.getState() != Round.RoundState.DESC) {
-            String errorMessage;
-            if (currentRound.getState() == Round.RoundState.READY) {
-                errorMessage = "호스트가 아직 설명 단계를 시작하지 않았습니다. 호스트가 '설명 단계 시작' 버튼을 클릭할 때까지 기다려주세요.";
-            } else {
-                errorMessage = "현재 설명 단계가 아닙니다. 현재 상태: " + currentRound.getState();
-            }
-            throw new RuntimeException(errorMessage);
-        }
+//        if (currentRound.getState() != Round.RoundState.DESC) {
+//            String errorMessage;
+//            if (currentRound.getState() == Round.RoundState.READY) {
+//                errorMessage = "호스트가 아직 설명 단계를 시작하지 않았습니다. 호스트가 '설명 단계 시작' 버튼을 클릭할 때까지 기다려주세요.";
+//            } else {
+//                errorMessage = "현재 설명 단계가 아닙니다. 현재 상태: " + currentRound.getState();
+//            }
+//            throw new RuntimeException(errorMessage);
+//        }
         
         MessageLog message = MessageLog.builder()
                 .roomId(room.getRoomId())

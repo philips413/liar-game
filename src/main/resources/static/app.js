@@ -99,6 +99,9 @@ function bindGameEventListeners() {
     // 게임 종료 후
     document.getElementById('new-game-btn').addEventListener('click', handleNewGame);
     document.getElementById('exit-game-btn').addEventListener('click', handleExitGame);
+    
+    // 방 코드 복사 버튼
+    document.getElementById('copy-room-code-btn').addEventListener('click', handleCopyRoomCode);
 }
 
 // 모달 이벤트 리스너
@@ -628,3 +631,109 @@ window.addEventListener('beforeunload', function(event) {
         return event.returnValue;
     }
 });
+
+// 방 코드 복사 기능
+function handleCopyRoomCode() {
+    const roomCode = AppState.roomInfo.code;
+    const copyBtn = document.getElementById('copy-room-code-btn');
+    
+    if (!roomCode) {
+        showNotification('복사할 방 코드가 없습니다.');
+        return;
+    }
+    
+    // 현재 URL + 방 코드로 공유 링크 생성
+    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
+    const shareText = `라이어 게임에 참여하세요!\n방 코드: ${roomCode}\n링크: ${shareUrl}`;
+    
+    // 클립보드 복사 시도
+    if (navigator.clipboard && window.isSecureContext) {
+        // 최신 방법 (HTTPS 환경)
+        navigator.clipboard.writeText(shareText).then(() => {
+            showCopySuccess(copyBtn, shareText);
+        }).catch(err => {
+            console.warn('클립보드 복사 실패:', err);
+            fallbackCopyToClipboard(shareText, copyBtn);
+        });
+    } else {
+        // 폴백 방법
+        fallbackCopyToClipboard(shareText, copyBtn);
+    }
+}
+
+// 복사 성공 피드백
+function showCopySuccess(button, copiedText) {
+    const originalText = button.innerHTML;
+    
+    // 버튼 상태 변경
+    button.classList.add('copied');
+    button.innerHTML = '✅ 복사됨!';
+    
+    // 모바일 진동 피드백
+    if (MobileUtils && MobileUtils.vibrate) {
+        MobileUtils.vibrate([100, 50, 100]);
+    }
+    
+    // 복사된 내용을 콘솔에 출력 (개발용)
+    console.log('복사된 내용:', copiedText);
+    
+    // 성공 알림
+    showNotification('방 코드와 링크가 클립보드에 복사되었습니다!');
+    
+    // 3초 후 원래 상태로 복원
+    setTimeout(() => {
+        button.classList.remove('copied');
+        button.innerHTML = originalText;
+    }, 3000);
+}
+
+// 폴백 클립보드 복사 (구형 브라우저용)
+function fallbackCopyToClipboard(text, button) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showCopySuccess(button, text);
+        } else {
+            showManualCopyModal(text);
+        }
+    } catch (err) {
+        console.error('폴백 복사 실패:', err);
+        showManualCopyModal(text);
+    } finally {
+        document.body.removeChild(textArea);
+    }
+}
+
+// 수동 복사 모달 (최후 수단)
+function showManualCopyModal(text) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-content" style="text-align: center; padding: 30px; max-width: 400px;">
+            <h3 style="margin-bottom: 20px;">수동으로 복사해주세요</h3>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dee2e6;">
+                <textarea readonly style="width: 100%; height: 100px; border: none; background: transparent; resize: none; font-family: monospace; font-size: 14px;">${text}</textarea>
+            </div>
+            <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">위 텍스트를 선택해서 복사하세요 (Ctrl+C)</p>
+            <button onclick="this.parentElement.parentElement.parentElement.remove()" class="btn btn-primary">닫기</button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 텍스트 자동 선택
+    const textarea = modal.querySelector('textarea');
+    textarea.focus();
+    textarea.select();
+}
