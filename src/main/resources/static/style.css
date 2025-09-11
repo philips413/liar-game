@@ -282,11 +282,29 @@ textarea {
 /* 내 정보 */
 .my-info {
     background: linear-gradient(45deg, #eef2ff, #fff);
-    padding: 20px;
-    border-radius: 10px;
+    padding: 25px;
+    border-radius: 15px;
     margin-bottom: 25px;
-    border: 2px solid #5a67d8;
+    border: 3px solid #5a67d8;
     text-align: center;
+    box-shadow: 0 6px 20px rgba(90, 103, 216, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+
+.my-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.6s;
+}
+
+.my-info:hover::before {
+    left: 100%;
 }
 
 .my-nickname {
@@ -297,27 +315,217 @@ textarea {
 }
 
 .my-role {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 10px;
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 15px;
+    padding: 12px 20px;
+    border-radius: 25px;
+    display: inline-block;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    animation: roleReveal 0.8s ease-out;
+    position: relative;
+    z-index: 1;
 }
 
 .my-role.liar {
-    color: #e53e3e;
+    color: #fff;
+    background: linear-gradient(135deg, #e53e3e, #c53030);
+    box-shadow: 0 4px 15px rgba(229, 62, 62, 0.4);
+    border: 2px solid #c53030;
 }
 
 .my-role.citizen {
-    color: #38a169;
+    color: #fff;
+    background: linear-gradient(135deg, #38a169, #2f855a);
+    box-shadow: 0 4px 15px rgba(56, 161, 105, 0.4);
+    border: 2px solid #2f855a;
+}
+
+@keyframes roleReveal {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 .my-word {
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 12px;
+    border: 3px solid #5a67d8;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    animation: wordReveal 1s ease-out 0.3s both;
+    display: inline-block;
+    min-width: 200px;
+}
+
+.my-word.liar-word {
+    background: linear-gradient(135deg, #e53e3e, #c53030);
+    border-color: #c53030;
+    box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);
     font-size: 1.3rem;
+    color: #fff;
+}
+
+@keyframes wordReveal {
+    0% {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* 역할 공개 알림 애니메이션 */
+@keyframes roleNotificationShow {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    10% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.05);
+    }
+    20% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+    80% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes roleNotificationHide {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+}
+
+.role-reveal-notification {
+    pointer-events: none;
+}
+
+.role-reveal-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.role-reveal-icon {
+    font-size: 2rem;
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    60% {
+        transform: translateY(-5px);
+    }
+}
+
+/* 대기실 역할 정보 */
+.my-role-info {
+    background: linear-gradient(135deg, #f8f9fa, #ffffff);
+    border: 2px solid #dee2e6;
+    border-radius: 15px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.5s ease-out;
+}
+
+.role-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.role-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.role-badge {
+    font-size: 1.2rem;
+    font-weight: 800;
+    padding: 10px 18px;
+    border-radius: 20px;
+    display: inline-block;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    min-width: 120px;
+}
+
+.role-badge.liar {
+    color: #fff;
+    background: linear-gradient(135deg, #e53e3e, #c53030);
+    box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+}
+
+.role-badge.citizen {
+    color: #fff;
+    background: linear-gradient(135deg, #38a169, #2f855a);
+    box-shadow: 0 4px 12px rgba(56, 161, 105, 0.3);
+}
+
+.role-word {
+    font-size: 1.1rem;
     font-weight: 700;
-    color: #5a67d8;
-    background: white;
-    padding: 10px;
-    border-radius: 8px;
-    border: 2px solid #5a67d8;
+    padding: 8px 16px;
+    border-radius: 10px;
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    color: #495057;
+    min-width: 150px;
+}
+
+.role-word.liar-word {
+    background: linear-gradient(135deg, #ffe6e6, #fff5f5);
+    border-color: #e53e3e;
+    color: #e53e3e;
+    font-weight: 800;
+}
+
+@keyframes slideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* 게임 단계 */
@@ -1039,4 +1247,141 @@ textarea {
     0% { box-shadow: 0 0 0 0 rgba(232, 67, 147, 0.7); }
     70% { box-shadow: 0 0 0 10px rgba(232, 67, 147, 0); }
     100% { box-shadow: 0 0 0 0 rgba(232, 67, 147, 0); }
+}
+
+/* 채팅창 스타일 */
+.chat-container {
+    background: #ffffff;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    margin: 20px 0;
+    height: 300px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.chat-messages {
+    height: 100%;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-message {
+    padding: 12px 16px;
+    border-radius: 20px;
+    max-width: 85%;
+    word-wrap: break-word;
+    font-size: 1rem;
+    line-height: 1.4;
+    animation: messageSlideIn 0.3s ease-out;
+}
+
+.chat-message.my-message {
+    background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+    color: white;
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.chat-message.other-message {
+    background: #f8f9fa;
+    color: #2d3436;
+    border: 1px solid #e9ecef;
+    align-self: flex-start;
+}
+
+.chat-message .sender-name {
+    font-weight: bold;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+    opacity: 0.8;
+}
+
+.chat-message .message-text {
+    margin: 0;
+}
+
+/* 설명 입력 섹션 */
+.description-input-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    margin-top: 20px;
+}
+
+.description-input-section .input-group {
+    margin-bottom: 15px;
+}
+
+.description-input-section textarea {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+.description-input-section textarea:focus {
+    outline: none;
+    border-color: #00b894;
+    box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.1);
+}
+
+.description-input-section .char-count {
+    text-align: right;
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.description-input-section .btn {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.description-input-section .btn:disabled {
+    background: #6c757d !important;
+    border-color: #6c757d !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 채팅창 스크롤바 스타일 */
+.chat-messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }

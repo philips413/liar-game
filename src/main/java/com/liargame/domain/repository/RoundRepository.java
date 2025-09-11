@@ -31,4 +31,7 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
     
     @Query("SELECT MAX(r.idx) FROM Round r WHERE r.room.code = :roomCode")
     Optional<Integer> findMaxRoundIdxByRoomCode(@Param("roomCode") String roomCode);
+    
+    // 방 삭제를 위한 메소드 추가
+    void deleteByRoomRoomId(Long roomId);
 }

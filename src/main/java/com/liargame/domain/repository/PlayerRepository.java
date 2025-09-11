@@ -40,4 +40,7 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     List<Player> findByRoomAndIsAlive(GameRoom room, boolean isAlive);
     
     Optional<Player> findByRoomAndRole(GameRoom room, Player.PlayerRole role);
+    
+    // 방 삭제를 위한 메소드 추가
+    void deleteByRoomRoomId(Long roomId);
 }

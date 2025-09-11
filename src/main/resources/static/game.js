@@ -74,7 +74,14 @@ function subscribeToRoom() {
             handleWebSocketMessage(data);
         });
         
+        // 개인 메시지 구독 (역할별 게임 종료 메시지용)
+        AppState.stompClient.subscribe(`/user/queue/personal`, function(message) {
+            const data = JSON.parse(message.body);
+            handleWebSocketMessage(data);
+        });
+        
         console.log(`방 토픽 구독: /topic/rooms/${AppState.roomInfo.code}`);
+        console.log(`개인 메시지 구독: /user/queue/personal`);
     }
 }
 
@@ -119,6 +126,12 @@ function handleWebSocketMessage(data) {
         case 'GAME_INTERRUPTED':
             handleGameInterrupted(data);
             break;
+        case 'ROOM_DELETED':
+            handleRoomDeleted(data);
+            break;
+        case 'DESC_UPDATE':
+            handleDescriptionUpdate(data);
+            break;
         default:
             console.warn('알 수 없는 메시지 타입:', data.type);
     }
@@ -143,7 +156,7 @@ function handlePlayerJoined(data) {
     }
     
     updatePlayersList();
-    showNotification(`${player.nickname}님이 참가했습니다.`);
+    // showNotification(`${player.nickname}님이 참가했습니다.`);
 }
 
 // 플레이어 퇴장 처리
@@ -201,6 +214,11 @@ function handleGameStarted(data) {
             AppState.playerInfo.role = myPlayer.role;
             AppState.playerInfo.cardWord = myPlayer.cardWord;
             console.log('내 역할 업데이트:', AppState.playerInfo.role, '카드 단어:', AppState.playerInfo.cardWord);
+            
+            // 대기실 역할 정보 즉시 업데이트 (게임 시작 전에)
+            if (typeof updateWaitingRoomRoleDisplay === 'function') {
+                updateWaitingRoomRoleDisplay();
+            }
         } else {
             console.warn('내 플레이어 정보를 찾을 수 없습니다. playerId:', AppState.playerInfo.id);
         }
@@ -209,7 +227,7 @@ function handleGameStarted(data) {
     }
     
     showGameScreen();
-    showNotification('게임이 시작되었습니다!');
+    // showNotification('게임이 시작되었습니다!');
 }
 
 // 설명 단계 시작 처리
@@ -222,10 +240,22 @@ function handleDescriptionPhaseStarted(data) {
         hostStartControls.remove();
     }
     
+    // 채팅창 초기화 및 입력 필드 활성화
+    clearChatMessages();
+    const descInput = document.getElementById('description-input');
+    const submitBtn = document.getElementById('submit-description-btn');
+    if (descInput) {
+        descInput.disabled = false;
+        descInput.value = '';
+    }
+    if (submitBtn) {
+        submitBtn.disabled = true; // 초기에는 비활성화
+        submitBtn.dataset.submitted = 'false';
+        submitBtn.textContent = '단어 설명';
+    }
+    
     // 모든 플레이어에게 설명 단계 표시
     showDescriptionPhase();
-    // 모든 플레이어에게 설명 팝업 바로 표시
-    showDescriptionModal();
     showNotification('설명 단계가 시작되었습니다!');
 }
 
@@ -249,8 +279,8 @@ function handleAllDescriptionsComplete(data) {
     console.log('모든 설명 완료:', gameData);
     console.log('descriptions 데이터:', gameData.descriptions);
     
-    // 설명 목록 표시
-    showAllDescriptionsModal(gameData.descriptions);
+    // 모든 설명 취합 팝업 제거 - 채팅창에서 실시간으로 이미 확인 가능
+    // showAllDescriptionsModal(gameData.descriptions);
     
     // 호스트에게만 투표 시작 버튼 표시
     showDescriptionCompletePhase();
@@ -440,32 +470,32 @@ function updateGameState(gameState) {
 }
 
 // 설명 제출
-async function handleSubmitDescription(customText = null) {
-    let descriptionText = customText;
+async function handleSubmitDescription() {
+    // 새로운 채팅 형태의 입력 필드에서 텍스트 가져오기
+    const descInput = document.getElementById('description-input');
+    const submitBtn = document.getElementById('submit-description-btn');
     
-    // customText가 없으면 모달에서 가져오기
-    if (!descriptionText) {
-        const modalInput = document.getElementById('modal-description-input');
-        descriptionText = modalInput ? modalInput.value.trim() : '';
+    if (!descInput || !submitBtn) {
+        showNotification('입력 필드를 찾을 수 없습니다.');
+        return;
     }
+    
+    const descriptionText = descInput.value.trim();
     
     if (!descriptionText) {
         showNotification('설명을 입력해주세요.');
         return;
     }
     
-    // 중복 제출 방지 (모달 버튼 체크)
-    const modalSubmitBtn = document.getElementById('modal-submit-description-btn');
-    if (modalSubmitBtn && modalSubmitBtn.disabled) {
+    // 중복 제출 방지
+    if (submitBtn.dataset.submitted === 'true') {
         showNotification('이미 설명이 제출되었습니다.');
         return;
     }
     
     try {
-        let _modalInput = document.getElementById('modal-description-input').value;
-
         console.log('설명 제출 중:', { playerId: AppState.playerInfo.id, roomCode: AppState.roomInfo.code });
-        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/desc?playerId=${AppState.playerInfo.id}&text=${encodeURIComponent(_modalInput)}`, {
+        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/desc?playerId=${AppState.playerInfo.id}&text=${encodeURIComponent(descriptionText)}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -493,19 +523,17 @@ async function handleSubmitDescription(customText = null) {
             throw new Error(errorMessage);
         }
         
-        // 모달 UI 비활성화
-        const modalInput = document.getElementById('modal-description-input');
-        if (modalInput) {
-            modalInput.disabled = true;
-        }
-        if (modalSubmitBtn) {
-            modalSubmitBtn.disabled = true;
-        }
+        // 채팅창에 내 메시지 추가
+        addChatMessage(AppState.playerInfo.nickname, descriptionText, true);
         
-        // 모달 닫기
-        hideDescriptionModal();
+        // 입력 필드 및 버튼 비활성화
+        descInput.disabled = true;
+        submitBtn.disabled = true;
+        submitBtn.dataset.submitted = 'true';
+        submitBtn.textContent = '제출 완료';
         
-        showNotification('설명이 제출되었습니다. 다른 플레이어들을 기다리는 중...');
+        // 입력 필드 초기화
+        descInput.value = '';
         
     } catch (error) {
         console.error('설명 제출 오류:', error);
@@ -891,4 +919,85 @@ function hideAllModals() {
     // 기존 모달들 제거
     const modals = document.querySelectorAll('.modal-overlay');
     modals.forEach(modal => modal.remove());
+}
+
+// 방 삭제 처리 (호스트가 나간 경우)
+function handleRoomDeleted(data) {
+    console.log('방 삭제:', data);
+    
+    const gameData = data.data || data;
+    const hostPlayer = gameData.hostPlayer;
+    const message = gameData.message || `호스트 ${hostPlayer ? hostPlayer.nickname : ''}님이 나가서 방이 삭제되었습니다. 메인화면으로 이동합니다.`;
+    
+    // 모든 모달 닫기
+    hideAllModals();
+    
+    // 방 삭제 알림 모달 표시
+    showRoomDeletedModal(message, hostPlayer);
+    
+    // WebSocket 연결 해제
+    disconnectWebSocket();
+    
+    // 앱 상태 초기화
+    AppState.roomInfo = { code: null, state: null };
+    AppState.playerInfo = { id: null, nickname: null, isHost: false };
+    AppState.players = [];
+    AppState.gameState = null;
+    AppState.gamePhase = null;
+    
+    // 3초 후 자동으로 메인화면으로 이동
+    setTimeout(() => {
+        hideRoomDeletedModal();
+        showScreen('home-screen');
+    }, 3000);
+}
+
+// 방 삭제 알림 모달 표시
+function showRoomDeletedModal(message, hostPlayer) {
+    const modalHTML = `
+        <div id="room-deleted-modal" class="modal-overlay" style="display: flex;">
+            <div class="modal-content" style="text-align: center; padding: 30px; max-width: 400px;">
+                <div style="font-size: 24px; margin-bottom: 20px;">🚪</div>
+                <h3 style="color: #e74c3c; margin-bottom: 20px;">방 삭제됨</h3>
+                <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
+                    ${message}
+                </p>
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="font-size: 14px; color: #6c757d; margin: 0;">
+                        잠시 후 자동으로 메인화면으로 이동합니다...
+                    </p>
+                </div>
+                <button onclick="hideRoomDeletedModal(); showScreen('home-screen');" 
+                        class="modal-btn primary-btn" 
+                        style="width: 100%; padding: 12px;">
+                    메인화면으로 이동
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// 방 삭제 모달 닫기
+function hideRoomDeletedModal() {
+    const modal = document.getElementById('room-deleted-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 설명 업데이트 처리 (다른 플레이어의 설명이 제출됨)
+function handleDescriptionUpdate(data) {
+    console.log('설명 업데이트:', data);
+    
+    const messageData = data.data || data;
+    const playerId = messageData.playerId;
+    const nickname = messageData.nickname;
+    const description = messageData.description;
+    
+    // 내가 제출한 설명이 아닌 경우에만 채팅창에 추가
+    if (playerId && playerId !== AppState.playerInfo.id && nickname && description) {
+        addChatMessage(nickname, description, false);
+    }
 }

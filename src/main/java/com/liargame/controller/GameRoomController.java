@@ -68,12 +68,12 @@ public class GameRoomController {
         }
     }
     
-    @PostMapping("/{code}/leave")
+    @GetMapping("/{code}/leave")
     public ResponseEntity<Map<String, String>> leaveRoom(
             @PathVariable String code,
-            @RequestParam Long playerId) {
+            @RequestParam String playerId) {
         try {
-            playerService.leaveRoom(code, playerId);
+            playerService.leaveRoom(code, Long.parseLong(playerId));
             return ResponseEntity.ok(Map.of("message", "방을 나갔습니다"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

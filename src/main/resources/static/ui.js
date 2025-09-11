@@ -204,7 +204,7 @@ async function handleHostStartDescription() {
         // 호스트도 설명 단계 시작
         showDescriptionPhase();
         // 호스트에게도 설명 팝업 바로 표시
-        showDescriptionModal();
+        // showDescriptionModal();
         showNotification('설명 단계가 시작되었습니다!');
         
     } catch (error) {
@@ -224,6 +224,11 @@ function showGameScreen() {
     updateMyInfoDisplay();
     updateGamePlayersList();
     updateRoundDisplay();
+    
+    // 대기실 역할 정보도 업데이트 (게임 시작 시 바로 표시하기 위해)
+    updateWaitingRoomRoleDisplay();
+    
+    console.log('게임 화면 표시 완료 - 현재 역할:', AppState.playerInfo.role);
 
     // 호스트 여부에 따라 다른 화면 표시
     if (AppState.playerInfo.isHost) {
@@ -233,7 +238,7 @@ function showGameScreen() {
     }
 }
 
-// 내 정보 표시 업데이트
+// 내 정보 표시 업데이트 (게임 화면)
 function updateMyInfoDisplay() {
     document.getElementById('game-my-nickname').textContent = AppState.playerInfo.nickname;
     
@@ -244,15 +249,117 @@ function updateMyInfoDisplay() {
         if (AppState.playerInfo.role === 'LIAR') {
             myRoleElement.textContent = '🎭 라이어';
             myRoleElement.className = 'my-role liar';
-            myWordElement.textContent = '단어를 추측하세요!';
-            myWordElement.style.color = '#e53e3e';
+            myWordElement.textContent = '❓❓❓';
+            myWordElement.className = 'my-word liar-word';
+            
+            // 라이어 역할 강조 효과
+            setTimeout(() => {
+                myRoleElement.style.animation = 'none';
+                myRoleElement.offsetHeight; // 리플로우 강제 실행
+                myRoleElement.style.animation = 'roleReveal 0.8s ease-out';
+            }, 100);
+            
         } else {
             myRoleElement.textContent = '👥 시민';
             myRoleElement.className = 'my-role citizen';
             myWordElement.textContent = AppState.playerInfo.cardWord || '';
-            myWordElement.style.color = '#5a67d8';
+            myWordElement.className = 'my-word';
+            
+            // 시민 역할 강조 효과
+            setTimeout(() => {
+                myRoleElement.style.animation = 'none';
+                myRoleElement.offsetHeight; // 리플로우 강제 실행  
+                myRoleElement.style.animation = 'roleReveal 0.8s ease-out';
+            }, 100);
         }
+        
+        // 역할 공개 알림 표시
+        showRoleRevealNotification();
     }
+    
+    // 대기실 역할 정보도 함께 업데이트
+    updateWaitingRoomRoleDisplay();
+}
+
+// 대기실 역할 정보 표시 업데이트
+function updateWaitingRoomRoleDisplay() {
+    const nicknameElement = document.getElementById('waiting-game-my-nickname');
+    const roleElement = document.getElementById('waiting-my-role');
+    const wordElement = document.getElementById('waiting-my-word');
+    
+    if (!nicknameElement || !roleElement || !wordElement) {
+        console.warn('대기실 역할 표시 요소를 찾을 수 없습니다');
+        return;
+    }
+    
+    // 닉네임 업데이트
+    nicknameElement.textContent = AppState.playerInfo.nickname || '';
+    
+    if (AppState.playerInfo.role) {
+        console.log('대기실에 역할 정보 표시:', AppState.playerInfo.role);
+        
+        if (AppState.playerInfo.role === 'LIAR') {
+            roleElement.textContent = '🎭 라이어';
+            roleElement.className = 'my-role liar';
+            wordElement.textContent = '❓❓❓';
+            wordElement.className = 'my-word liar-word';
+        } else {
+            roleElement.textContent = '👥 시민';
+            roleElement.className = 'my-role citizen';
+            wordElement.textContent = AppState.playerInfo.cardWord || '단어를 기다리는 중...';
+            wordElement.className = 'my-word';
+        }
+    } else {
+        console.log('대기실에 기본 메시지 표시');
+        roleElement.textContent = '역할이 아직 배정되지 않았습니다';
+        roleElement.className = 'my-role';
+        wordElement.textContent = '게임이 시작되면 단어가 표시됩니다';
+        wordElement.className = 'my-word';
+    }
+}
+
+// 역할 공개 알림 표시
+function showRoleRevealNotification() {
+    const notification = document.createElement('div');
+    notification.className = 'role-reveal-notification';
+    notification.innerHTML = `
+        <div class="role-reveal-content">
+            <div class="role-reveal-icon">🎭</div>
+            <div class="role-reveal-text">당신의 역할이 공개되었습니다!</div>
+        </div>
+    `;
+    
+    // 스타일 추가
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: 600;
+        animation: roleNotificationShow 2s ease-out forwards;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // 3초 후 자동 제거
+    setTimeout(() => {
+        if (notification && notification.parentNode) {
+            notification.style.animation = 'roleNotificationHide 0.5s ease-out forwards';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 500);
+        }
+    }, 3000);
 }
 
 // 게임 플레이어 목록 업데이트
@@ -275,12 +382,47 @@ function updateRoundDisplay() {
 
 // 게임 단계 표시 업데이트
 function updateGamePhaseDisplay(data) {
+    const phaseInfo = document.getElementById('phase-info');
+    
+    // 호스트가 아닌 플레이어는 정적 화면 유지
+    if (!AppState.playerInfo.isHost) {
+        // 호스트가 아닌 플레이어는 phase-info만 업데이트
+        switch (data.state || AppState.gamePhase) {
+            case 'DESC':
+                phaseInfo.textContent = '설명 작성 단계';
+                break;
+            case 'DESC_COMPLETE':
+                phaseInfo.textContent = '설명 완료 - 호스트 대기 중';
+                break;
+            case 'VOTE':
+                phaseInfo.textContent = '투표 진행 중';
+                break;
+            case 'FINAL_DEFENSE':
+                phaseInfo.textContent = '최후진술 단계';
+                break;
+            case 'FINAL_DEFENSE_COMPLETE':
+                phaseInfo.textContent = '최후진술 완료';
+                break;
+            case 'FINAL_VOTING':
+                phaseInfo.textContent = '생존/사망 투표';
+                break;
+            case 'ROUND_END':
+                phaseInfo.textContent = '라운드 종료';
+                break;
+            case 'END':
+                phaseInfo.textContent = '게임 종료';
+                break;
+            default:
+                phaseInfo.textContent = '게임 진행 중...';
+        }
+        return; // 호스트가 아니면 여기서 종료
+    }
+    
+    // 호스트인 경우에만 게임 단계 화면 변경
     // 모든 게임 단계 숨기기
     document.querySelectorAll('.game-phase').forEach(phase => {
         phase.classList.add('hidden');
     });
-    
-    const phaseInfo = document.getElementById('phase-info');
     
     switch (data.state || AppState.gamePhase) {
         case 'DESC':
@@ -431,6 +573,11 @@ function handleFinalDefenseInput(e) {
 
 // 설명 완료 단계 표시
 function showDescriptionCompletePhase() {
+    // 호스트가 아닌 플레이어는 화면 변경 없음
+    if (!AppState.playerInfo.isHost) {
+        return;
+    }
+    
     const descCompletePhase = document.getElementById('description-complete-phase');
     descCompletePhase.classList.remove('hidden');
     
@@ -577,6 +724,11 @@ function displayVoteResult(data) {
 
 // 최후진술 단계 표시
 function showFinalDefensePhase(accusedPlayer) {
+    // 호스트가 아니고 지목된 플레이어도 아닌 경우 화면 변경 없음
+    if (!AppState.playerInfo.isHost && accusedPlayer && accusedPlayer.playerId !== AppState.playerInfo.id) {
+        return;
+    }
+    
     const finalDefensePhase = document.getElementById('final-defense-phase');
     finalDefensePhase.classList.remove('hidden');
     
@@ -709,6 +861,11 @@ function showFinalDefenseCompletePhase(data) {
 
 // 생존/사망 투표 단계 표시
 function showFinalVotingPhase(accusedPlayer) {
+    // 지목된 플레이어는 투표에 참여하지 않음
+    if (accusedPlayer && accusedPlayer.playerId === AppState.playerInfo.id) {
+        return;
+    }
+    
     const finalVotingPhase = document.getElementById('final-voting-phase');
     finalVotingPhase.classList.remove('hidden');
     
@@ -731,6 +888,11 @@ function showFinalVotingPhase(accusedPlayer) {
 // 게임 종료 단계 표시
 // 라운드 종료 단계 표시
 function showRoundEndPhase(data) {
+    // 호스트가 아닌 플레이어는 화면 변경 없음
+    if (!AppState.playerInfo.isHost) {
+        return;
+    }
+    
     const roundEndPhase = document.getElementById('round-end-phase');
     roundEndPhase.classList.remove('hidden');
     
@@ -781,18 +943,42 @@ function showGameEndPhase(data) {
     const winnerInfo = document.getElementById('winner-info');
     const playersRoles = document.getElementById('players-roles');
     
-    // 승리 정보 표시
-    if (data.winner) {
-        if (data.winner === 'CITIZENS') {
-            resultTitle.textContent = '🎉 시민팀 승리!';
-            winnerInfo.textContent = data.message || '라이어를 성공적으로 찾아냈습니다!';
-            winnerInfo.className = 'result-info citizens-win';
-        } else if (data.winner === 'LIAR') {
-            resultTitle.textContent = '🎭 라이어 승리!';
-            winnerInfo.textContent = data.message || '라이어가 끝까지 살아남았습니다!';
-            winnerInfo.className = 'result-info liar-win';
+    // 역할별 맞춤 메시지 표시
+    console.log('게임 종료 데이터:', data);
+    
+    // 제목과 메시지는 서버에서 전송된 개인화된 메시지 사용
+    if (data.reason) {
+        switch (data.reason) {
+            case 'mission_success':
+                resultTitle.textContent = '🎭 미션 성공!';
+                winnerInfo.className = 'result-info liar-win';
+                break;
+            case 'mission_failed':
+                resultTitle.textContent = '💀 미션 실패';
+                winnerInfo.className = 'result-info liar-lose';
+                break;
+            case 'citizens_victory':
+                resultTitle.textContent = '🎉 시민 승리!';
+                winnerInfo.className = 'result-info citizens-win';
+                break;
+            case 'citizens_defeat':
+                resultTitle.textContent = '😞 시민 패배';
+                winnerInfo.className = 'result-info citizens-lose';
+                break;
+            default:
+                // 기존 로직 유지 (호환성)
+                if (data.winner === 'CITIZENS') {
+                    resultTitle.textContent = '🎉 시민팀 승리!';
+                    winnerInfo.className = 'result-info citizens-win';
+                } else if (data.winner === 'LIAR') {
+                    resultTitle.textContent = '🎭 라이어 승리!';
+                    winnerInfo.className = 'result-info liar-win';
+                }
         }
     }
+    
+    // 개인화된 메시지 표시
+    winnerInfo.textContent = data.message || '게임이 종료되었습니다.';
     
     // 플레이어 역할 공개
     if (data.players) {
@@ -904,9 +1090,91 @@ function setLoadingState(buttonId, loading = true) {
     }
 }
 
+// 게임 중단 모달 표시
+function showGameInterruptedModal(message, playerName) {
+    console.log('게임 중단 모달 표시:', message, playerName);
+    
+    // 기존 모달들 숨기기
+    hideAllModals();
+    
+    // 게임 중단 모달 내용 설정
+    const modal = document.getElementById('notification-modal');
+    const messageElement = document.getElementById('notification-message');
+    
+    if (modal && messageElement) {
+        messageElement.textContent = message;
+        modal.classList.remove('success', 'error', 'warning');
+        modal.classList.add('warning');
+        showModal('notification-modal');
+        
+        // 3초 후 자동으로 모달 닫기
+        setTimeout(() => {
+            hideModal('notification-modal');
+        }, 3000);
+    } else {
+        // 모달이 없으면 alert 사용
+        alert(message);
+    }
+}
+
+// 채팅 메시지 추가 함수
+function addChatMessage(senderName, message, isMyMessage = false) {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${isMyMessage ? 'my-message' : 'other-message'}`;
+    
+    const senderDiv = document.createElement('div');
+    senderDiv.className = 'sender-name';
+    senderDiv.textContent = senderName;
+    
+    const textDiv = document.createElement('div');
+    textDiv.className = 'message-text';
+    textDiv.textContent = message;
+    
+    messageDiv.appendChild(senderDiv);
+    messageDiv.appendChild(textDiv);
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // 스크롤을 최하단으로 이동
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// 채팅창 초기화
+function clearChatMessages() {
+    const chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        chatMessages.innerHTML = '';
+    }
+}
+
+// 설명 입력 필드 문자 수 제한 및 버튼 상태 관리
+function updateDescriptionInput() {
+    const input = document.getElementById('description-input');
+    const charCount = document.getElementById('desc-char-count');
+    const submitBtn = document.getElementById('submit-description-btn');
+    
+    if (!input || !charCount || !submitBtn) return;
+    
+    const count = input.value.length;
+    charCount.textContent = count;
+    
+    // 입력이 있고 버튼이 아직 비활성화되지 않았을 때만 활성화
+    submitBtn.disabled = count === 0 || submitBtn.dataset.submitted === 'true';
+}
+
 // 초기화 시 텍스트 입력 제한 설정
 document.addEventListener('DOMContentLoaded', function() {
     // 글자 수 제한 설정
     limitTextInput('description-input', 200, 'desc-char-count');
     limitTextInput('final-defense-input', 300, 'final-char-count');
+    
+    // 새로운 설명 입력 필드 이벤트 리스너
+    const descInput = document.getElementById('description-input');
+    if (descInput) {
+        descInput.addEventListener('input', updateDescriptionInput);
+        descInput.addEventListener('keyup', updateDescriptionInput);
+    }
 });

@@ -35,4 +35,7 @@ public interface VoteRepository extends JpaRepository<Vote, Long> {
     List<Vote> findByRoundAndIsFinalVote(Round round, boolean isFinalVote);
     
     long countByRoundAndIsFinalVote(Round round, boolean isFinalVote);
+    
+    // 방 삭제를 위한 메소드들 추가
+    void deleteByRoundRoundId(Long roundId);
 }

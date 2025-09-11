@@ -120,6 +120,9 @@ public class GamePlayService {
         
         logAudit(room.getRoomId(), playerId, "DESC_SUBMIT", description);
         
+        // 실시간으로 다른 플레이어들에게 설명 업데이트 전송
+        sendDescriptionUpdate(roomCode, player, description);
+        
         checkIfAllDescriptionsSubmitted(room, currentRound);
     }
     
@@ -781,27 +784,53 @@ public class GamePlayService {
                 .findFirst()
                 .orElse(keyPlayer);
         
-        Map<String, Object> gameEndData = new HashMap<>();
-        gameEndData.put("winner", winnerType);
-        gameEndData.put("liarId", liar != null ? liar.getPlayerId() : null);
-        gameEndData.put("liarName", liar != null ? liar.getNickname() : "Unknown");
-        gameEndData.put("totalRounds", room.getCurrentRound());
-        gameEndData.put("maxRounds", room.getRoundLimit());
-        
-        if ("CITIZENS".equals(winnerType)) {
-            gameEndData.put("reason", "liar_eliminated");
-            gameEndData.put("message", String.format("🎉 시민팀 승리!\n라이어 %s님이 발각되었습니다.", liar != null ? liar.getNickname() : ""));
-        } else if ("LIAR".equals(winnerType)) {
-            if (room.getCurrentRound() >= room.getRoundLimit()) {
-                gameEndData.put("reason", "round_limit_reached");
-                gameEndData.put("message", String.format("🎭 라이어 승리!\n%s님이 끝까지 정체를 숨겼습니다.", liar != null ? liar.getNickname() : ""));
+        // 각 플레이어에게 개별적으로 역할에 맞는 메시지 전송
+        for (Player player : allPlayers) {
+            Map<String, Object> gameEndData = new HashMap<>();
+            gameEndData.put("winner", winnerType);
+            gameEndData.put("liarId", liar != null ? liar.getPlayerId() : null);
+            gameEndData.put("liarName", liar != null ? liar.getNickname() : "Unknown");
+            gameEndData.put("totalRounds", room.getCurrentRound());
+            gameEndData.put("maxRounds", room.getRoundLimit());
+            gameEndData.put("players", allPlayers.stream().map(p -> Map.of(
+                "playerId", p.getPlayerId(),
+                "nickname", p.getNickname(),
+                "role", p.getRole().name()
+            )).collect(Collectors.toList()));
+            
+            // 플레이어 역할에 따른 개별 메시지 설정
+            if (player.getRole() == Player.PlayerRole.LIAR) {
+                // 라이어용 메시지
+                if ("LIAR".equals(winnerType)) {
+                    gameEndData.put("reason", "mission_success");
+                    if (room.getCurrentRound() >= room.getRoundLimit()) {
+                        gameEndData.put("message", "🎭 미션에 성공하였습니다!\n끝까지 정체를 숨겼습니다.");
+                    } else {
+                        gameEndData.put("message", "🎭 미션에 성공하였습니다!\n시민이 부족해 승리했습니다.");
+                    }
+                } else {
+                    gameEndData.put("reason", "mission_failed");
+                    gameEndData.put("message", "💀 미션에 실패하였습니다.\n정체가 발각되었습니다.");
+                }
             } else {
-                gameEndData.put("reason", "insufficient_players");
-                gameEndData.put("message", String.format("🎭 라이어 승리!\n시민이 부족해 %s님이 승리했습니다.", liar != null ? liar.getNickname() : ""));
+                // 시민용 메시지
+                if ("CITIZENS".equals(winnerType)) {
+                    gameEndData.put("reason", "citizens_victory");
+                    gameEndData.put("message", String.format("🎉 시민이 승리하였습니다!\n라이어 %s님을 찾아냈습니다.", liar != null ? liar.getNickname() : ""));
+                } else {
+                    gameEndData.put("reason", "citizens_defeat");
+                    if (room.getCurrentRound() >= room.getRoundLimit()) {
+                        gameEndData.put("message", String.format("😞 시민이 실패하였습니다.\n라이어 %s님이 끝까지 숨었습니다.", liar != null ? liar.getNickname() : ""));
+                    } else {
+                        gameEndData.put("message", String.format("😞 시민이 실패하였습니다.\n라이어 %s님이 승리했습니다.", liar != null ? liar.getNickname() : ""));
+                    }
+                }
             }
+            
+            // 개별 플레이어에게 메시지 전송
+            GameMessage personalMessage = GameMessage.of("GAME_END", room.getCode(), gameEndData);
+            messagingTemplate.convertAndSendToUser(player.getPlayerId().toString(), "/queue/personal", personalMessage);
         }
-        
-        broadcastGameEnd(room.getCode(), gameEndData);
         
         logAudit(room.getRoomId(), null, "GAME_ENDED", 
                 String.format("winner: %s, liar: %s", winnerType, liar != null ? liar.getNickname() : "Unknown"));
@@ -925,5 +954,24 @@ public class GamePlayService {
         proceedToNextRound(room);
         
         logAudit(room.getRoomId(), hostId, "PROCEED_NEXT_ROUND", "Host proceeded to next round");
+    }
+    
+    /**
+     * 설명 제출 시 실시간으로 다른 플레이어들에게 DESC_UPDATE 메시지 전송
+     */
+    private void sendDescriptionUpdate(String roomCode, Player player, String description) {
+        Map<String, Object> data = Map.of(
+            "playerId", player.getPlayerId(),
+            "nickname", player.getNickname(),
+            "description", description
+        );
+        
+        GameMessage message = GameMessage.of("DESC_UPDATE", roomCode, player.getPlayerId(), player.getNickname(), data);
+        
+        // 방의 모든 플레이어에게 브로드캐스트
+        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
+        
+        log.info("DESC_UPDATE 메시지 전송: roomCode={}, player={}, description={}", 
+                roomCode, player.getNickname(), description);
     }
 }

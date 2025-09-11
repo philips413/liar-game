@@ -1,5 +1,6 @@
 package com.liargame.service;
 
+import com.liargame.config.PlayerDisconnectEvent;
 import com.liargame.domain.entity.Player;
 import com.liargame.domain.repository.PlayerRepository;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,5 +72,18 @@ public class PlayerService {
         );
         GameMessage message = GameMessage.of("PLAYER_LEFT", roomCode, Map.of("player", playerData));
         messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
+    }
+    
+    @EventListener
+    public void handlePlayerDisconnectEvent(PlayerDisconnectEvent event) {
+        log.info("WebSocket 연결 해제 이벤트 수신: 방 {}, 플레이어 ID {}, 세션 {}", 
+                event.getRoomCode(), event.getPlayerId(), event.getSessionId());
+        
+        try {
+            // 기존 leaveRoom 메서드 호출
+            this.leaveRoom(event.getRoomCode(), event.getPlayerId());
+        } catch (Exception e) {
+            log.error("PlayerDisconnectEvent 처리 중 오류: {}", e.getMessage(), e);
+        }
     }
 }

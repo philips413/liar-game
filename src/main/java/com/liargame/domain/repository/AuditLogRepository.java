@@ -25,4 +25,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     
     @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.roomId = :roomId AND a.action = :action")
     Long countByRoomIdAndAction(@Param("roomId") Long roomId, @Param("action") String action);
+    
+    // 방 삭제를 위한 메소드 추가
+    void deleteByRoomId(Long roomId);
 }

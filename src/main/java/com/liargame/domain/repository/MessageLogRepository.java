@@ -23,4 +23,8 @@ public interface MessageLogRepository extends JpaRepository<MessageLog, Long> {
     
     @Query("SELECT COUNT(m) FROM MessageLog m WHERE m.round.roundId = :roundId AND m.type = 'DESC'")
     Integer countDescriptionMessagesByRoundId(@Param("roundId") Long roundId);
+    
+    // 방 삭제를 위한 메소드들 추가
+    void deleteByRoundRoundId(Long roundId);
+    void deleteByRoomId(Long roomId);
 }

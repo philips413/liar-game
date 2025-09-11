@@ -103,16 +103,6 @@ function bindGameEventListeners() {
 
 // 모달 이벤트 리스너
 function bindModalEventListeners() {
-    // 설명 작성 모달
-    document.getElementById('modal-submit-description-btn').addEventListener('click', handleModalSubmitDescription);
-    document.getElementById('modal-cancel-description-btn').addEventListener('click', () => {
-        hideModal('description-modal');
-    });
-
-    // 모든 설명 보기 모달
-    document.getElementById('modal-close-descriptions-btn').addEventListener('click', () => {
-        hideModal('all-descriptions-modal');
-    });
 
     // 알림 모달 (있는 경우)
     const notificationCloseBtn = document.getElementById('notification-close-btn');
@@ -130,12 +120,14 @@ function bindModalEventListeners() {
         });
     }
 
-    // 텍스트 입력 문자수 카운팅
+    // 텍스트 입력 문자수 카운팅 (주석처리된 요소에 대한 안전 처리)
     const modalDescInput = document.getElementById('modal-description-input');
     const modalDescCharCount = document.getElementById('modal-desc-char-count');
-    modalDescInput.addEventListener('input', () => {
-        modalDescCharCount.textContent = modalDescInput.value.length;
-    });
+    if (modalDescInput && modalDescCharCount) {
+        modalDescInput.addEventListener('input', () => {
+            modalDescCharCount.textContent = modalDescInput.value.length;
+        });
+    }
 }
 
 // 모달 표시
@@ -182,81 +174,6 @@ function showStartGameCountdown() {
     };
     
     updateCountdown();
-}
-
-// 설명 작성 모달 표시
-function showDescriptionModal() {
-    const modalWordElement = document.getElementById('modal-my-word');
-    const modalInput = document.getElementById('modal-description-input');
-    const charCount = document.getElementById('modal-desc-char-count');
-    
-    // 내 단어 표시 (라이어의 경우 "???" 표시)
-    if (AppState.playerInfo.role === 'LIAR') {
-        modalWordElement.textContent = '???';
-    } else {
-        modalWordElement.textContent = AppState.playerInfo.cardWord || '???';
-    }
-    
-    // 입력창 초기화
-    modalInput.value = '';
-    charCount.textContent = '0';
-    
-    showModal('description-modal');
-}
-
-// 설명 작성 모달 숨기기
-function hideDescriptionModal() {
-    hideModal('description-modal');
-}
-
-// 모든 설명 보기 모달 표시
-function showAllDescriptionsModal(descriptions) {
-    const container = document.getElementById('modal-all-descriptions');
-
-    if (!descriptions || descriptions.length === 0) {
-        container.innerHTML = '<div class="waiting-message">아직 작성된 설명이 없습니다.</div>';
-    } else {
-        container.innerHTML = descriptions.map(desc => `
-            <div class="description-item">
-                <div class="description-player">${desc.playerNickname || desc.nickname}</div>
-                <div class="description-text">${desc.text || desc.summary || '내용 없음'}</div>
-            </div>
-        `).join('');
-    }
-    
-    showModal('all-descriptions-modal');
-}
-
-// 모달에서 설명 제출
-function handleModalSubmitDescription() {
-    const input = document.getElementById('modal-description-input');
-    const text = input.value.trim();
-    
-    if (!text) {
-        showNotification('설명을 입력해주세요.');
-        return;
-    }
-    
-    if (text.length > 200) {
-        showNotification('설명은 200자 이하로 작성해주세요.');
-        return;
-    }
-    
-    // 메인 설명 입력 필드에 텍스트 설정
-    const mainInput = document.getElementById('description-input');
-    if (mainInput) {
-        mainInput.value = text;
-    }
-    
-    hideModal('description-modal');
-    
-    // 메인 화면의 제출 버튼을 프로그래밍 방식으로 클릭
-    const mainSubmitBtn = document.getElementById('submit-description-btn');
-    if (mainSubmitBtn && !mainSubmitBtn.disabled) {
-        mainSubmitBtn.click();
-    } else {
-        showNotification('설명 제출 버튼을 찾을 수 없거나 이미 제출되었습니다.');
-    }
 }
 
 // 화면 전환
@@ -446,9 +363,25 @@ function showWaitingRoom() {
 
     showScreen('waiting-room-screen');
     
+    // 역할 정보 업데이트 (항상 호출하여 초기화)
+    if (typeof updateWaitingRoomRoleDisplay === 'function') {
+        console.log('대기실 진입 - 역할 정보 업데이트 호출');
+        updateWaitingRoomRoleDisplay();
+    } else {
+        console.warn('updateWaitingRoomRoleDisplay 함수를 찾을 수 없습니다');
+    }
+    
     // 게임 시작 버튼 상태 즉시 업데이트
     console.log('updatePlayersList 호출 전 상태 확인');
     updatePlayersList();
+    
+    // 추가 지연 후 역할 정보 다시 업데이트
+    setTimeout(() => {
+        if (typeof updateWaitingRoomRoleDisplay === 'function') {
+            console.log('지연 후 대기실 역할 정보 재업데이트 호출');
+            updateWaitingRoomRoleDisplay();
+        }
+    }, 500);
     
     // 강제 업데이트도 함께 실행
     setTimeout(() => {
@@ -529,14 +462,11 @@ async function handleLeaveRoom() {
         showLoading(true);
 
         try {
-            await fetch(`/api/rooms/${AppState.roomInfo.code}/leave`, {
-                method: 'POST',
+            await fetch(`/api/rooms/${AppState.roomInfo.code}/leave?playerId=${AppState.playerInfo.id}`, {
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    playerId: AppState.playerInfo.id
-                })
+                }
             });
 
             // WebSocket 연결 해제

@@ -365,6 +365,16 @@ public class GameRoomService {
             return;
         }
         
+        log.info("플레이어 퇴장 처리 시작: 방 {}, 플레이어 {} (호스트: {}), 방 상태: {}", 
+                roomCode, player.getNickname(), player.getIsHost(), room.getState());
+        
+        // 호스트가 나간 경우 방 전체 삭제 (대기실/게임 중 구분 없이)
+        if (player.getIsHost()) {
+            log.info("호스트가 퇴장하여 방 {} 즉시 삭제 시작 - 현재 상태: {}", roomCode, room.getState());
+            deleteRoomCompletely(room, player);
+            return;
+        }
+        
         // 플레이어 퇴장 처리
         player.setLeftAt(LocalDateTime.now());
         playerRepository.save(player);
@@ -374,6 +384,9 @@ public class GameRoomService {
             List<Player> activePlayers = playerRepository.findByRoomCodeAndLeftAtIsNull(roomCode);
             
             log.info("플레이어 퇴장으로 인한 게임 중단 확인: 방 {}, 남은 플레이어 {}", roomCode, activePlayers.size());
+            
+            // 진행 중인 라운드 데이터 정리
+            cleanupCurrentRoundData(room);
             
             // 게임 중단하고 대기실로 이동
             room.setState(GameRoom.RoomState.LOBBY);
@@ -397,13 +410,17 @@ public class GameRoomService {
     }
     
     private void resetAllPlayersForLobby(List<Player> players) {
+        log.info("플레이어 상태 대기실용으로 초기화: {} 명", players.size());
+        
         for (Player player : players) {
             player.setRole(Player.PlayerRole.CITIZEN);
             player.setIsAlive(true);
             player.setCardWord(null);
-            player.setOrderNo(null);
+            // orderNo는 null로 설정하지 않고 유지 (새로운 게임 시작 시 다시 설정됨)
         }
         playerRepository.saveAll(players);
+        
+        log.info("플레이어 상태 초기화 완료");
     }
     
     private void broadcastGameInterrupted(String roomCode, Player leftPlayer) {
@@ -428,5 +445,91 @@ public class GameRoomService {
         );
         GameMessage message = GameMessage.of("PLAYER_LEFT", roomCode, Map.of("player", playerData));
         messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
+    }
+    
+    private void deleteRoomCompletely(GameRoom room, Player hostPlayer) {
+        String roomCode = room.getCode();
+        Long roomId = room.getRoomId();
+        
+        log.info("방 {} 완전 삭제 시작 - 호스트 {} 퇴장으로 인함 (상태: {})", 
+                roomCode, hostPlayer.getNickname(), room.getState());
+        
+        try {
+            // 1. 먼저 남은 플레이어들에게 방 삭제 알림 브로드캐스트
+            broadcastRoomDeletion(roomCode, hostPlayer);
+            
+            // 2. 데이터베이스에서 관련 데이터 삭제 (외래키 순서 고려)
+            // Vote 데이터 삭제 (Round 참조)
+            List<Round> rounds = roundRepository.findByRoomCodeOrderByIdxAsc(roomCode);
+            for (Round round : rounds) {
+                voteRepository.deleteByRoundRoundId(round.getRoundId());
+                messageLogRepository.deleteByRoundRoundId(round.getRoundId());
+            }
+            
+            // Round 데이터 삭제
+            roundRepository.deleteByRoomRoomId(roomId);
+            
+            // MessageLog 데이터 삭제 (Player 참조)
+            messageLogRepository.deleteByRoomId(roomId);
+            
+            // AuditLog 데이터 삭제
+            auditLogRepository.deleteByRoomId(roomId);
+            
+            // Player 데이터 삭제
+            playerRepository.deleteByRoomRoomId(roomId);
+            
+            // GameRoom 데이터 삭제
+            gameRoomRepository.delete(room);
+            
+            logAudit(roomId, hostPlayer.getPlayerId(), "ROOM_DELETED", 
+                    String.format("호스트 %s 퇴장으로 인한 방 삭제", hostPlayer.getNickname()));
+            
+            log.info("방 {} 완전 삭제 완료", roomCode);
+            
+        } catch (Exception e) {
+            log.error("방 {} 삭제 중 오류 발생: {}", roomCode, e.getMessage(), e);
+        }
+    }
+    
+    private void broadcastRoomDeletion(String roomCode, Player hostPlayer) {
+        Map<String, Object> deletionData = Map.of(
+                "message", String.format("호스트 %s님이 나가서 방이 삭제되었습니다. 메인화면으로 이동합니다.", hostPlayer.getNickname()),
+                "reason", "HOST_LEFT",
+                "hostPlayer", Map.of(
+                        "playerId", hostPlayer.getPlayerId(),
+                        "nickname", hostPlayer.getNickname()
+                )
+        );
+        
+        GameMessage message = GameMessage.of("ROOM_DELETED", roomCode, deletionData);
+        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
+        
+        log.info("방 {} 삭제 알림 브로드캐스트 완료", roomCode);
+    }
+    
+    private void cleanupCurrentRoundData(GameRoom room) {
+        String roomCode = room.getCode();
+        Long roomId = room.getRoomId();
+        
+        log.info("게임 중단으로 인한 현재 라운드 데이터 정리 시작: 방 {}", roomCode);
+        
+        try {
+            // 현재 라운드의 모든 관련 데이터 삭제
+            List<Round> rounds = roundRepository.findByRoomCodeOrderByIdxAsc(roomCode);
+            for (Round round : rounds) {
+                // 투표 데이터 삭제
+                voteRepository.deleteByRoundRoundId(round.getRoundId());
+                // 메시지 로그 삭제
+                messageLogRepository.deleteByRoundRoundId(round.getRoundId());
+            }
+            
+            // 라운드 데이터 삭제
+            roundRepository.deleteByRoomRoomId(roomId);
+            
+            log.info("라운드 데이터 정리 완료: 방 {}", roomCode);
+            
+        } catch (Exception e) {
+            log.error("라운드 데이터 정리 중 오류 발생: 방 {}, 오류: {}", roomCode, e.getMessage(), e);
+        }
     }
 }
