@@ -528,21 +528,6 @@ function showNotification(message) {
     showModal('notification-modal');
 }
 
-// 모달 표시/숨김
-function showModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('hidden');
-    }
-}
-
-function hideModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-}
-
 // 유틸리티 함수들
 function formatPlayerList(players) {
     if (!players || !Array.isArray(players)) {

@@ -249,7 +249,6 @@ function handleDescriptionPhaseStarted(data) {
     }
     
     // 채팅창 초기화 및 입력 필드 활성화
-    // clearChatMessages();
     const descInput = document.getElementById('description-input');
     const submitBtn = document.getElementById('submit-description-btn');
     if (descInput) {
@@ -287,11 +286,6 @@ function handleAllDescriptionsComplete(data) {
     console.log('모든 설명 완료:', gameData);
     console.log('descriptions 데이터:', gameData.descriptions);
     
-    // 모든 설명 취합 팝업 제거 - 채팅창에서 실시간으로 이미 확인 가능
-    // showAllDescriptionsModal(gameData.descriptions);
-    
-    // 호스트에게만 투표 시작 버튼 표시
-    // showDescriptionCompletePhase();
 }
 
 // 투표 결과 처리
@@ -497,12 +491,6 @@ async function handleSubmitDescription() {
         showNotification('설명을 입력해주세요.');
         return;
     }
-    
-    // 중복 제출 방지
-    // if (submitBtn.dataset.submitted === 'true') {
-    //     showNotification('이미 설명이 제출되었습니다.');
-    //     return;
-    // }
     
     try {
         console.log('설명 제출 중:', { playerId: AppState.playerInfo.id, roomCode: AppState.roomInfo.code });

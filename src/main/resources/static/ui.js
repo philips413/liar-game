@@ -182,9 +182,6 @@ async function handleHostStartDescription() {
         
         // 호스트도 설명 단계 시작
         showDescriptionPhase();
-        // 호스트에게도 설명 팝업 바로 표시
-        // showDescriptionModal();
-        // 시스템 메시지는 handleDescriptionPhaseStarted에서 처리됨
         
     } catch (error) {
         console.error('설명 단계 시작 오류:', error);
@@ -407,9 +404,6 @@ function updateGamePhaseDisplay(data) {
 function showDescriptionPhaseWithoutModal() {
     const descriptionPhase = document.getElementById('description-phase');
     descriptionPhase.classList.remove('hidden');
-    
-    // "내 차례" 표시는 하지 않음 - 호스트가 명시적으로 시작했을 때만
-    // showMyTurnBadge("단어를 설명할 차례입니다!");
     
     // 모달 내 입력 필드 초기화
     const modalDescInput = document.getElementById('modal-description-input');
@@ -943,13 +937,6 @@ function showGameEndPhase(data) {
             `).join('')}
         `;
     }
-}
-
-// 게임 단계 숨기기
-function hideAllGamePhases() {
-    document.querySelectorAll('.game-phase').forEach(phase => {
-        phase.classList.add('hidden');
-    });
 }
 
 // 폼 유효성 검사
