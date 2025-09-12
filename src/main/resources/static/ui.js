@@ -393,34 +393,6 @@ function showDescriptionPhase() {
     }
 }
 
-// 내 차례 표시 배지
-function showMyTurnBadge(message) {
-    // 기존 배지가 있으면 제거
-    const existingBadge = document.querySelector('.my-turn-badge');
-    if (existingBadge) {
-        existingBadge.remove();
-    }
-    
-    // 새 배지 생성
-    const badge = document.createElement('div');
-    badge.className = 'my-turn-badge';
-    badge.textContent = `🔔 ${message}`;
-    
-    // 게임 상태 표시 다음에 삽입
-    const gameStatus = document.querySelector('.game-status');
-    if (gameStatus && gameStatus.parentNode) {
-        gameStatus.parentNode.insertBefore(badge, gameStatus.nextSibling);
-    }
-}
-
-// 내 차례 배지 숨기기
-function hideMyTurnBadge() {
-    const badge = document.querySelector('.my-turn-badge');
-    if (badge) {
-        badge.remove();
-    }
-}
-
 // 설명 입력 처리
 function handleDescriptionInput(e) {
     const count = e.target.value.length;
@@ -469,10 +441,7 @@ function showDescriptionCompletePhase() {
 function showVotingPhase(players) {
     const votingPhase = document.getElementById('voting-phase');
     votingPhase.classList.remove('hidden');
-    
-    // "내 차례" 표시 추가 (시니어 친화적)
-    showMyTurnBadge("라이어를 찾아 투표하세요!");
-    
+
     const votingPlayersElement = document.getElementById('voting-players');
     
     // 생존한 플레이어들로 투표 카드 생성 (자신 제외)
@@ -561,9 +530,7 @@ function showFinalDefensePhase(accusedPlayer) {
         
         // 지목된 플레이어가 본인인지 확인
         if (accusedPlayer.playerId === AppState.playerInfo.id) {
-            // "내 차례" 표시 추가 (시니어 친화적)
-            showMyTurnBadge("최후진술을 작성하세요!");
-            
+
             finalDefenseForm.classList.remove('hidden');
             finalDefenseWaiting.classList.add('hidden');
             
@@ -688,13 +655,6 @@ function showFinalVotingPhase(accusedPlayer) {
     
     const finalVotingPhase = document.getElementById('final-voting-phase');
     finalVotingPhase.classList.remove('hidden');
-    
-    // "내 차례" 표시 추가 (시니어 친화적) - 지목당한 플레이어가 아닌 경우에만
-    if (accusedPlayer && accusedPlayer.playerId !== AppState.playerInfo.id) {
-        showMyTurnBadge("생존/사망을 결정하세요!");
-    } else {
-        hideMyTurnBadge();
-    }
     
     if (accusedPlayer) {
         document.getElementById('final-voting-player-name').textContent = accusedPlayer.nickname;
