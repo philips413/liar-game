@@ -74,14 +74,13 @@ function subscribeToRoom() {
             handleWebSocketMessage(data);
         });
         
-        // 개인 메시지 구독 (역할별 게임 종료 메시지용)
-        AppState.stompClient.subscribe(`/user/queue/personal`, function(message) {
-            const data = JSON.parse(message.body);
-            handleWebSocketMessage(data);
-        });
+        // 개인 메시지 구독 (역할별 게임 종료 메시지용) - 주석 처리 (현재는 방 전체 브로드캐스트 사용)
+        // AppState.stompClient.subscribe(`/user/queue/personal`, function(message) {
+        //     const data = JSON.parse(message.body);
+        //     handleWebSocketMessage(data);
+        // });
         
         console.log(`방 토픽 구독: /topic/rooms/${AppState.roomInfo.code}`);
-        console.log(`개인 메시지 구독: /user/queue/personal`);
     }
 }
 
@@ -120,9 +119,6 @@ function handleWebSocketMessage(data) {
         case 'VOTING_STARTED':
             handleVotingStarted(data);
             break;
-        case 'CONTINUE_DESCRIPTION':
-            handleContinueDescriptionPhase(data);
-            break;
         case 'NEXT_ROUND_START':
             handleNextRoundStart(data);
             break;
@@ -140,6 +136,9 @@ function handleWebSocketMessage(data) {
             break;
         case 'DESC_UPDATE':
             handleDescriptionUpdate(data);
+            break;
+        case 'HOST_DESCRIPTION_OPTIONS':
+            handleHostDescriptionOptions(data);
             break;
         default:
             console.warn('알 수 없는 메시지 타입:', data.type);
@@ -276,7 +275,12 @@ function handleRoundStateUpdate(data) {
     if (gameData.currentRound) {
         AppState.roomInfo.currentRound = gameData.currentRound;
     }
-    
+
+    const descInput = document.getElementById('description-input');
+    descInput.disabled = false;
+    const submitBtn = document.getElementById('submit-description-btn');
+    submitBtn.disabled = false;
+
     updateGamePhaseDisplay(gameData);
 }
 
@@ -286,6 +290,14 @@ function handleAllDescriptionsComplete(data) {
     console.log('모든 설명 완료:', gameData);
     console.log('descriptions 데이터:', gameData.descriptions);
     
+    // 모든 플레이어의 설명이 완료되었음을 호스트에게 알림
+    if (AppState.playerInfo.isHost) {
+        addHostStatusMessage('모든 플레이어의 설명이 완료되었습니다.', 'success');
+        setHostActionButton('🗳️ 투표 시작', handleStartVoting);
+    }
+    
+    // UI 업데이트
+    showDescriptionCompletePhase();
 }
 
 // 투표 결과 처리
@@ -296,8 +308,8 @@ function handleVoteResult(data) {
     console.log('처리할 데이터:', gameData);
     console.log('현재 플레이어 정보:', AppState.playerInfo);
     
-    // 채팅창에 투표 결과 표시
-    displayVoteResultInChat(gameData);
+    // 호스트 패널에 투표 결과 표시
+    displayVoteResultInHostPanel(gameData);
     
     // 모달도 표시 (기존 기능 유지)
     displayVoteResult(gameData);
@@ -335,6 +347,13 @@ function handleFinalDefenseComplete(data) {
     const gameData = data.data || data;
     console.log('최후진술 완료:', gameData);
     
+    // 호스트에게 최후진술 완료 알림
+    if (AppState.playerInfo.isHost && gameData.accusedPlayer) {
+        addHostStatusMessage(`${gameData.accusedPlayer.nickname}님의 최후진술이 완료되었습니다.`, 'info');
+        addHostStatusMessage(`"${gameData.finalDefenseText}"`, 'info');
+        setHostActionButton('⚖️ 생존/사망 투표 시작', handleStartFinalVoting);
+    }
+    
     // 모든 플레이어에게 최후진술 내용을 모달로 표시
     if (gameData.finalDefenseText && gameData.accusedPlayer) {
         showFinalDefenseResultModal(gameData.accusedPlayer, gameData.finalDefenseText);
@@ -347,6 +366,12 @@ function handleFinalDefenseComplete(data) {
 function handleFinalVotingStart(data) {
     const gameData = data.data || data;
     console.log('재투표 시작:', gameData);
+    
+    // 호스트에게 생존/사망 투표 시작 알림
+    if (AppState.playerInfo.isHost && gameData.accusedPlayer) {
+        addHostStatusMessage(`${gameData.accusedPlayer.nickname}님에 대한 생존/사망 투표가 시작되었습니다.`, 'warning');
+        clearHostActionButtons(); // 투표 진행 중이므로 버튼 제거
+    }
     
     addSystemMessage('생존/사망 재투표를 시작합니다. 지목된 플레이어의 운명을 결정해주세요.', 'final-defense');
     showFinalVotingPhase(gameData.accusedPlayer);
@@ -844,30 +869,6 @@ async function handleExitGame() {
     await handleLeaveRoom();
 }
 
-// 설명 계속하기 (호스트)
-async function handleContinueDescription() {
-    if (!AppState.playerInfo.isHost) {
-        showNotification('호스트만 설명 단계를 계속할 수 있습니다.');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/actions/continue-description?hostId=${AppState.playerInfo.id}`, {
-            method: 'POST'
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || '설명 계속하기에 실패했습니다.');
-        }
-        
-        // 시스템 메시지는 WebSocket 응답에서 처리됨
-        
-    } catch (error) {
-        console.error('설명 계속하기 오류:', error);
-        showNotification(error.message || '설명 계속하기 중 오류가 발생했습니다.');
-    }
-}
 
 // 다음 라운드 진행 (호스트)
 async function handleProceedNextRound() {
@@ -899,6 +900,9 @@ function handleVotingStarted(data) {
     const gameData = data.data || data;
     console.log('투표 시작 웹소켓 메시지:', gameData);
     
+    // 호스트 채팅 메시지 제거
+    removeHostChatMessages();
+    
     addSystemMessage('투표를 시작합니다! 라이어를 찾아 투표해주세요.', 'voting');
     
     // 모든 플레이어에게 투표 화면 표시
@@ -908,74 +912,41 @@ function handleVotingStarted(data) {
     }
 }
 
-// 추가 설명 단계 WebSocket 핸들러
-function handleContinueDescriptionPhase(data) {
-    const gameData = data.data || data;
-    console.log('추가 설명 단계 웹소켓 메시지:', gameData);
-    
-    // 모든 플레이어에게 추가 설명 기회 제공
-    addSystemMessage('추가 설명 단계를 시작합니다. 다시 한 번 단어에 대해 설명해주세요.', 'description');
-    
-    // UI 상태 초기화 - 모든 플레이어가 다시 설명할 수 있도록
-    resetDescriptionPhase();
-    
-    // 설명 완료 단계 숨기고 일반 게임 화면으로 복귀
-    hideAllGamePhases();
-    showDescriptionPhaseWithoutModal();
-    
-    // phase-info 업데이트
-    const phaseInfo = document.getElementById('phase-info');
-    if (phaseInfo) {
-        phaseInfo.textContent = '추가 설명 단계 - 다시 한 번 설명해주세요';
-    }
-}
 
-// 설명 단계 UI 상태 초기화 함수
-function resetDescriptionPhase() {
-    // 설명 입력 필드 초기화 및 활성화
-    const descriptionInput = document.getElementById('description-input');
-    const submitBtn = document.getElementById('submit-description-btn');
-    
-    if (descriptionInput) {
-        descriptionInput.value = '';
-        descriptionInput.disabled = false;
-        descriptionInput.placeholder = '받은 단어에 대해 다시 설명해주세요...';
+// 투표 결과를 호스트 패널에 표시
+function displayVoteResultInHostPanel(gameData) {
+    if (!AppState.playerInfo.isHost) {
+        return; // 호스트가 아니면 무시
     }
     
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = '단어 설명';
-        submitBtn.style.display = 'block';
-    }
+    console.log('투표 결과를 호스트 패널에 표시:', gameData);
     
-    // 문자 카운터 초기화
-    const charCount = document.getElementById('desc-char-count');
-    if (charCount) {
-        charCount.textContent = '0';
-    }
-}
-
-// 투표 결과를 채팅창에 표시
-function displayVoteResultInChat(gameData) {
-    // 투표 결과 정보 구성
-    let resultMessage = '🗳️ 투표 결과\n\n';
-    console.log(gameData)
+    // 투표 결과 메시지 구성
+    let resultMessage = '🗳️ 투표 결과: ';
+    
     if (gameData.voteResults && gameData.voteResults.length > 0) {
         // 투표 결과를 득표수 순으로 정렬
         const sortedResults = gameData.voteResults.sort((a, b) => b.voteCount - a.voteCount);
         
-        sortedResults.forEach(result => {
-            resultMessage += `${result.targetName}: ${result.voteCount}표\n`;
-        });
+        const resultDetails = sortedResults.map(result => 
+            `${result.targetName}: ${result.voteCount}표`
+        ).join(', ');
+        
+        resultMessage += resultDetails;
+        
+        // 호스트 패널에 투표 결과 추가
+        addHostStatusMessage(resultMessage, 'vote-result');
         
         if (gameData.accusedName && gameData.accusedId) {
-            resultMessage += `\n👉 ${gameData.accusedName}님이 최다 득표로 지목되었습니다.`;
-            resultMessage += `\n최후진술을 기다리고 있습니다.`;
+            addHostStatusMessage(`👉 ${gameData.accusedName}님이 최다 득표로 지목되었습니다.`, 'warning');
+            addHostStatusMessage('최후진술을 기다리고 있습니다.', 'info');
+            clearHostActionButtons(); // 최후진술 대기 중이므로 버튼 제거
         } else {
-            resultMessage += `\n과반수 득표자가 없어 다음 라운드로 진행합니다.`;
+            addHostStatusMessage('과반수 득표자가 없어 다음 라운드로 진행합니다.', 'info');
+            setHostActionButton('➡️ 다음 라운드 진행', handleProceedNextRound);
         }
     } else {
-        resultMessage += '투표 결과가 없습니다.';
+        addHostStatusMessage('투표 결과가 없습니다.', 'warning');
     }
     
     // 채팅창에 시스템 메시지로 추가
@@ -1094,4 +1065,146 @@ function handleDescriptionUpdate(data) {
     if (playerId && playerId !== AppState.playerInfo.id && nickname && description) {
         addChatMessage(nickname, description, false);
     }
+}
+
+// 호스트 전용 설명 완료 옵션 처리
+function handleHostDescriptionOptions(data) {
+    console.log('[DEBUG] handleHostDescriptionOptions 호출됨');
+    console.log('[DEBUG] 받은 데이터:', data);
+    console.log('[DEBUG] 현재 플레이어 정보:', AppState.playerInfo);
+    
+    const messageData = data.data || data;
+    console.log('[DEBUG] messageData:', messageData);
+    
+    // 호스트 ID 확인하여 현재 플레이어가 호스트인지 검증
+    if (messageData.hostId && messageData.hostId !== AppState.playerInfo.id) {
+        console.log('[DEBUG] 호스트 전용 메시지 - 현재 플레이어는 호스트가 아님');
+        console.log('[DEBUG] messageData.hostId:', messageData.hostId, '내 ID:', AppState.playerInfo.id);
+        return;
+    }
+    
+    // 추가 안전장치: isHost 체크
+    if (!AppState.playerInfo.isHost) {
+        console.log('[DEBUG] 호스트 전용 메시지 - isHost false');
+        return;
+    }
+    
+    console.log('[DEBUG] 호스트 인증 통과, 메시지 표시 진행');
+    
+    // 채팅창에 호스트 전용 메시지와 버튼 표시
+    if (messageData.message && messageData.buttons) {
+        console.log('[DEBUG] addHostChatMessage 호출');
+        addHostChatMessage(messageData.message, messageData.buttons);
+    } else {
+        console.log('[DEBUG] message 또는 buttons가 없음:', messageData.message, messageData.buttons);
+    }
+}
+
+// 호스트 전용 채팅 메시지 추가 (버튼 포함)
+function addHostChatMessage(message, buttons) {
+    console.log('[DEBUG] addHostChatMessage 시작');
+    console.log('[DEBUG] message:', message, 'buttons:', buttons);
+    
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) {
+        console.log('[DEBUG] chat-messages 요소를 찾을 수 없음');
+        return;
+    }
+    console.log('[DEBUG] chat-messages 요소 찾음');
+    
+    const messageElement = document.createElement('div');
+    messageElement.className = 'host-chat-message';
+    messageElement.style.cssText = `
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+        border: 2px solid #f39c12;
+        border-radius: 12px;
+        padding: 15px;
+        margin: 10px 0;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    `;
+    
+    const messageText = document.createElement('div');
+    messageText.textContent = message;
+    messageText.style.cssText = `
+        color: #8b4513;
+        font-weight: bold;
+        font-size: 16px;
+        margin-bottom: 10px;
+        text-align: center;
+    `;
+    
+    messageElement.appendChild(messageText);
+    
+    // 버튼 컨테이너
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 10px;
+    `;
+    
+    // 버튼들 생성
+    buttons.forEach(button => {
+        const btn = document.createElement('button');
+        btn.textContent = button.text;
+        btn.style.cssText = `
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 100px;
+        `;
+        
+        if (button.id === 'allow') {
+            btn.style.cssText += `
+                background: #2ecc71;
+                color: white;
+            `;
+            btn.addEventListener('mouseenter', () => {
+                btn.style.backgroundColor = '#27ae60';
+                btn.style.transform = 'scale(1.05)';
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.style.backgroundColor = '#2ecc71';
+                btn.style.transform = 'scale(1)';
+            });
+        } else if (button.id === 'vote') {
+            btn.style.cssText += `
+                background: #e74c3c;
+                color: white;
+            `;
+            btn.addEventListener('mouseenter', () => {
+                btn.style.backgroundColor = '#c0392b';
+                btn.style.transform = 'scale(1.05)';
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.style.backgroundColor = '#e74c3c';
+                btn.style.transform = 'scale(1)';
+            });
+            btn.onclick = () => handleStartVoting();
+        }
+        
+        buttonContainer.appendChild(btn);
+    });
+    
+    messageElement.appendChild(buttonContainer);
+    
+    console.log('[DEBUG] 호스트 메시지 요소 생성 완료');
+    chatMessages.appendChild(messageElement);
+    
+    // 스크롤을 최신 메시지로 이동
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    console.log('[DEBUG] 호스트 메시지 채팅창에 추가 완료');
+}
+
+// 호스트 채팅 메시지 제거
+function removeHostChatMessages() {
+    const hostMessages = document.querySelectorAll('.host-chat-message');
+    hostMessages.forEach(message => {
+        message.remove();
+    });
 }

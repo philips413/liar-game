@@ -96,6 +96,10 @@ function showHostGameStartControls() {
     
     // 모든 게임 단계 숨김
     hideAllGamePhases();
+    
+    // 호스트 컨트롤 패널에 게임 시작 버튼 설정
+    // addHostStatusMessage('게임이 시작되었습니다. 설명 단계를 시작해주세요.', 'info');
+    // setHostActionButton('📝 설명 단계 시작', handleHostStartDescription);
 }
 
 // 호스트가 아닌 플레이어 대기 화면
@@ -131,69 +135,6 @@ function hideAllGamePhases() {
     });
 }
 
-// 호스트 시작 컨트롤 생성
-function createHostStartControls() {
-    const controlsDiv = document.createElement('div');
-    controlsDiv.id = 'host-start-controls';
-    controlsDiv.className = 'game-phase host-controls';
-    
-    controlsDiv.innerHTML = `
-        <h3>🎮 게임 진행 관리</h3>
-        <div class="host-control-buttons">
-            <button id="host-start-description-btn" class="btn btn-primary large-btn">
-                📝 설명 단계 시작
-            </button>
-            <div class="control-description">
-                모든 플레이어가 받은 단어에 대해 설명을 작성합니다
-            </div>
-        </div>
-    `;
-    
-    // 이벤트 리스너 추가
-    setTimeout(() => {
-        const startDescBtn = document.getElementById('host-start-description-btn');
-        if (startDescBtn) {
-            startDescBtn.addEventListener('click', handleHostStartDescription);
-        }
-    }, 100);
-    
-    return controlsDiv;
-}
-
-// 호스트가 설명 단계 시작
-async function handleHostStartDescription() {
-    console.log('호스트가 설명 단계 시작');
-    
-    // 호스트 시작 컨트롤 숨김
-    const hostStartControls = document.getElementById('host-start-controls');
-    if (hostStartControls) {
-        hostStartControls.classList.add('hidden');
-    }
-    
-    // 모든 플레이어에게 설명 단계 시작 알림
-    try {
-        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/actions/start-description?hostId=${AppState.playerInfo.id}`, {
-            method: 'POST'
-        });
-        
-        if (!response.ok) {
-            throw new Error('설명 단계 시작에 실패했습니다.');
-        }
-        
-        // 호스트도 설명 단계 시작
-        showDescriptionPhase();
-        
-    } catch (error) {
-        console.error('설명 단계 시작 오류:', error);
-        showNotification(error.message);
-        
-        // 호스트 컨트롤 다시 표시
-        if (hostStartControls) {
-            hostStartControls.classList.remove('hidden');
-        }
-    }
-}
-
 // 게임 화면 표시
 function showGameScreen() {
     showScreen('game-screen');
@@ -208,8 +149,10 @@ function showGameScreen() {
 
     // 호스트 여부에 따라 다른 화면 표시
     if (AppState.playerInfo.isHost) {
+        showHostControlPanel();
         showHostGameStartControls();
     } else {
+        hideHostControlPanel();
         showWaitingForHostPhase();
     }
 }
@@ -521,52 +464,20 @@ function showDescriptionCompletePhase() {
     
     descCompletePhase.classList.remove('hidden');
     
-    // 호스트 전용 컨트롤 표시
-    const hostControls = document.getElementById('host-controls');
-    const waitingMessage = document.getElementById('waiting-host-decision');
-    
     if (AppState.playerInfo.isHost) {
-        if (hostControls) {
-            hostControls.classList.remove('hidden');
-        }
-        if (waitingMessage) {
-            waitingMessage.classList.add('hidden');
-        }
-
-        // 호스트에게 명확한 안내 메시지 표시 (한 번만)
-        addSystemMessage('모든 플레이어의 설명이 완료되었습니다. 호스트가 다음 단계를 결정해주세요.', 'description');
-
-        // 호스트 컨트롤 버튼에 설명 추가
-        enhanceHostControls();
-    } else {
-        if (hostControls) {
-            hostControls.classList.add('hidden');
-        }
-        if (waitingMessage) {
-            waitingMessage.classList.remove('hidden');
-        }
-        
-        // 일반 플레이어에게 대기 메시지
-        const phaseInfo = document.getElementById('phase-info');
-        if (phaseInfo) {
-            phaseInfo.textContent = '호스트가 다음 단계를 결정하는 중...';
-        }
+        // 호스트 컨트롤 패널에 완료 메시지와 투표 시작 버튼 표시
+        addHostStatusMessage('모든 플레이어의 설명이 완료되었습니다.', 'success');
+        setHostActionButton('🗳️ 투표 시작', handleStartVoting);
     }
 }
 
 // 호스트 컨트롤 버튼 강화
 function enhanceHostControls() {
     const startVotingBtn = document.getElementById('start-voting-btn');
-    const continueDescBtn = document.getElementById('continue-description-btn');
     
     if (startVotingBtn) {
         startVotingBtn.innerHTML = '🗳️ 투표 시작';
         startVotingBtn.title = '라이어를 찾기 위한 투표를 시작합니다';
-    }
-    
-    if (continueDescBtn) {
-        continueDescBtn.innerHTML = '📝 추가 설명 받기';
-        continueDescBtn.title = '플레이어들이 단어에 대해 추가로 설명하게 합니다';
     }
 }
 
@@ -1410,5 +1321,118 @@ function optimizeFinalDefenseInput() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 200) + 'px';
         });
+    }
+}
+
+// ===== 호스트 컨트롤 패널 관리 =====
+
+// 호스트 컨트롤 패널 표시
+function showHostControlPanel() {
+    const hostPanel = document.getElementById('host-control-panel');
+    if (hostPanel) {
+        hostPanel.classList.remove('hidden');
+    }
+}
+
+// 호스트 컨트롤 패널 숨김
+function hideHostControlPanel() {
+    const hostPanel = document.getElementById('host-control-panel');
+    if (hostPanel) {
+        hostPanel.classList.add('hidden');
+    }
+}
+
+// 호스트 상태 메시지 추가
+function addHostStatusMessage(message, type = 'info') {
+    if (!AppState.playerInfo.isHost) {
+        return; // 호스트가 아니면 무시
+    }
+    
+    const statusArea = document.getElementById('host-status-area');
+    if (!statusArea) return;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `host-status-message ${type}`;
+    messageDiv.textContent = message;
+    
+    statusArea.appendChild(messageDiv);
+    
+    // 스크롤을 최하단으로 이동
+    statusArea.scrollTop = statusArea.scrollHeight;
+    
+    // 메시지가 너무 많으면 오래된 것 제거 (최대 10개 유지)
+    const messages = statusArea.querySelectorAll('.host-status-message');
+    if (messages.length > 10) {
+        messages[0].remove();
+    }
+}
+
+// 호스트 상태 영역 초기화
+function clearHostStatusMessages() {
+    if (!AppState.playerInfo.isHost) {
+        return;
+    }
+    
+    const statusArea = document.getElementById('host-status-area');
+    if (statusArea) {
+        statusArea.innerHTML = '';
+    }
+}
+
+// 호스트 액션 버튼 설정
+function setHostActionButton(buttonText, buttonAction, buttonType = 'primary') {
+    if (!AppState.playerInfo.isHost) {
+        return;
+    }
+    
+    const actionsArea = document.getElementById('host-actions-area');
+    if (!actionsArea) return;
+    
+    // 기존 버튼들 제거
+    actionsArea.innerHTML = '';
+    
+    const button = document.createElement('button');
+    button.className = `btn btn-${buttonType}`;
+    button.textContent = buttonText;
+    button.onclick = buttonAction;
+    
+    actionsArea.appendChild(button);
+}
+
+// 호스트 액션 버튼 여러 개 설정
+function setHostActionButtons(buttons) {
+    if (!AppState.playerInfo.isHost) {
+        return;
+    }
+    
+    const actionsArea = document.getElementById('host-actions-area');
+    if (!actionsArea) return;
+    
+    // 기존 버튼들 제거
+    actionsArea.innerHTML = '';
+    
+    buttons.forEach(buttonConfig => {
+        const button = document.createElement('button');
+        button.className = `btn btn-${buttonConfig.type || 'primary'}`;
+        button.textContent = buttonConfig.text;
+        button.onclick = buttonConfig.action;
+        
+        if (buttonConfig.disabled) {
+            button.disabled = true;
+        }
+        
+        actionsArea.appendChild(button);
+    });
+}
+
+// 호스트 액션 버튼 모두 제거
+function clearHostActionButtons() {
+    if (!AppState.playerInfo.isHost) {
+        return;
+    }
+    
+    const actionsArea = document.getElementById('host-actions-area');
+    if (actionsArea) {
+        actionsArea.innerHTML = '';
     }
 }

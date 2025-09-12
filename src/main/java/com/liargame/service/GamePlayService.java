@@ -26,46 +26,7 @@ public class GamePlayService {
     private final MessageLogRepository messageLogRepository;
     private final AuditLogRepository auditLogRepository;
     private final SimpMessageSendingOperations messagingTemplate;
-    
-    public void startDescriptionPhase(String roomCode, Long hostId) {
-        // 호스트 권한 확인
-        Player host = playerRepository.findById(hostId)
-                .orElseThrow(() -> new RuntimeException("플레이어를 찾을 수 없습니다"));
-        
-        if (!host.getIsHost()) {
-            throw new RuntimeException("호스트만 설명 단계를 시작할 수 있습니다");
-        }
-        
-        GameRoom room = gameRoomRepository.findByCode(roomCode)
-                .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
-        
-        if (room.getState() != GameRoom.RoomState.ROUND) {
-            throw new RuntimeException("게임이 진행 중이 아닙니다");
-        }
-        
-        // 현재 라운드 확인
-        Optional<Round> currentRound = roundRepository.findByRoomCodeAndIdx(roomCode, room.getCurrentRound());
-        if (currentRound.isEmpty()) {
-            throw new RuntimeException("현재 라운드를 찾을 수 없습니다");
-        }
-        
-        Round round = currentRound.get();
-        if (round.getState() != Round.RoundState.READY) {
-            throw new RuntimeException("설명 단계를 시작할 수 없습니다. 현재 라운드 상태: " + round.getState());
-        }
-        
-        round.setState(Round.RoundState.DESC);
-        roundRepository.save(round);
-        
-        // 모든 플레이어에게 설명 단계 시작 알림
-        GameMessage message = GameMessage.of("DESCRIPTION_PHASE_STARTED", roomCode, 
-                Map.of("message", "설명 단계가 시작되었습니다", "roundIdx", room.getCurrentRound()));
-        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
-        
-        logAudit(room.getRoomId(), hostId, "DESCRIPTION_PHASE_STARTED", 
-                String.format("round: %d", room.getCurrentRound()));
-    }
-    
+
     public void submitDescription(String roomCode, Long playerId, String description) {
         System.out.println("=== submitDescription 시작 ===");
         System.out.println("roomCode: " + roomCode);
@@ -112,7 +73,7 @@ public class GamePlayService {
         
         // 실시간으로 다른 플레이어들에게 설명 업데이트 전송
         sendDescriptionUpdate(roomCode, player, description);
-        
+
     }
     
     public void submitVote(String roomCode, Long voterId, Long targetId, boolean isFinalVote) {
@@ -826,35 +787,6 @@ public class GamePlayService {
         auditLogRepository.save(auditLog);
     }
     
-    // WebSocket 브로드캐스트 메소드들
-    private void broadcastAllDescriptionsComplete(String roomCode) {
-        GameRoom room = gameRoomRepository.findByCode(roomCode)
-                .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
-        Round currentRound = roundRepository.findByRoomCodeAndIdx(roomCode, room.getCurrentRound())
-                .orElseThrow(() -> new IllegalStateException("현재 라운드를 찾을 수 없습니다"));
-        
-        // 현재 라운드의 모든 설명 메시지 조회
-        List<MessageLog> descriptions = messageLogRepository.findByRoundIdAndTypeOrderByCreatedAtAsc(
-                currentRound.getRoundId(), MessageLog.MessageType.DESC);
-        
-        // 프론트엔드에서 사용할 형태로 변환
-        List<Map<String, Object>> descriptionData = descriptions.stream()
-                .map(msg -> {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("playerNickname", msg.getPlayer().getNickname());
-                    map.put("text", msg.getText());
-                    return map;
-                })
-                .collect(Collectors.toList());
-        
-        GameMessage message = GameMessage.of("ALL_DESCRIPTIONS_COMPLETE", roomCode, 
-                Map.of(
-                    "message", "모든 설명이 완료되었습니다",
-                    "descriptions", descriptionData
-                ));
-        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
-    }
-    
     private void broadcastRoundStateChange(String roomCode, String state, Object data) {
         GameMessage message = GameMessage.of("ROUND_STATE", roomCode, 
                 Map.of("state", state, "data", data));
@@ -871,41 +803,7 @@ public class GamePlayService {
                 Map.of("nextRound", nextRound, "message", String.format("잠시 후 %d라운드가 시작됩니다...", nextRound)));
         messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
     }
-    
-    private void broadcastGameEnd(String roomCode, Map<String, Object> gameEndData) {
-        GameMessage message = GameMessage.of("GAME_END", roomCode, gameEndData);
-        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
-    }
-    
-    public void continueDescription(String roomCode, Long hostId) {
-        GameRoom room = gameRoomRepository.findByCode(roomCode)
-                .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
-        
-        Player host = playerRepository.findById(hostId)
-                .orElseThrow(() -> new RuntimeException("플레이어를 찾을 수 없습니다"));
-        
-        if (!host.getIsHost()) {
-            throw new RuntimeException("호스트만 설명 단계를 계속할 수 있습니다");
-        }
-        
-        Round currentRound = roundRepository.findByRoomCodeAndIdx(roomCode, room.getCurrentRound())
-                .orElseThrow(() -> new RuntimeException("현재 라운드를 찾을 수 없습니다"));
-        
-        if (currentRound.getState() != Round.RoundState.DESC_COMPLETE) {
-            throw new RuntimeException("설명 단계 완료 상태가 아닙니다");
-        }
-        
-        // 설명 단계로 다시 전환
-        currentRound.setState(Round.RoundState.DESC);
-        roundRepository.save(currentRound);
-        
-        // 모든 플레이어에게 설명 단계 재시작 알림
-        broadcastRoundStateChange(roomCode, "DESC", 
-            Map.of("message", "호스트가 설명 단계를 계속하기로 했습니다. 추가 설명을 작성해주세요."));
-        
-        logAudit(room.getRoomId(), hostId, "CONTINUE_DESCRIPTION", "Host decided to continue description phase");
-    }
-    
+
     public void proceedNextRound(String roomCode, Long hostId) {
         GameRoom room = gameRoomRepository.findByCode(roomCode)
                 .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
@@ -947,4 +845,5 @@ public class GamePlayService {
         log.info("DESC_UPDATE 메시지 전송: roomCode={}, player={}, description={}", 
                 roomCode, player.getNickname(), description);
     }
+
 }
