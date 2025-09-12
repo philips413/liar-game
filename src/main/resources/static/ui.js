@@ -96,9 +96,6 @@ function showHostGameStartControls() {
     
     // 모든 게임 단계 숨김
     hideAllGamePhases();
-    
-    // 호스트 게임 시작 단계 표시
-    showHostStartPhase();
 }
 
 // 호스트가 아닌 플레이어 대기 화면
@@ -132,24 +129,6 @@ function hideAllGamePhases() {
             phase.classList.add('hidden');
         }
     });
-}
-
-// 호스트 게임 시작 단계 표시
-function showHostStartPhase() {
-    const phaseInfo = document.getElementById('phase-info');
-    phaseInfo.textContent = '호스트 - 게임 진행 단계를 선택하세요';
-    
-    // 호스트 전용 컨트롤 생성 및 표시
-    const hostStartControls = createHostStartControls();
-    const gameContainer = document.querySelector('#game-screen .container');
-    
-    // 기존 호스트 시작 컨트롤 제거
-    const existing = document.getElementById('host-start-controls');
-    if (existing) {
-        existing.remove();
-    }
-    
-    gameContainer.appendChild(hostStartControls);
 }
 
 // 호스트 시작 컨트롤 생성

@@ -113,7 +113,6 @@ public class GamePlayService {
         // 실시간으로 다른 플레이어들에게 설명 업데이트 전송
         sendDescriptionUpdate(roomCode, player, description);
         
-        checkIfAllDescriptionsSubmitted(room, currentRound);
     }
     
     public void submitVote(String roomCode, Long voterId, Long targetId, boolean isFinalVote) {
@@ -374,22 +373,6 @@ public class GamePlayService {
             throw new RuntimeException("재투표 단계가 아닙니다");
         } else if (!isFinalVote && round.getState() != Round.RoundState.VOTE) {
             throw new RuntimeException("투표 단계가 아닙니다");
-        }
-    }
-    
-    private void checkIfAllDescriptionsSubmitted(GameRoom room, Round round) {
-        List<Player> alivePlayers = playerRepository.findAlivePlayersByRoomCode(room.getCode());
-        Integer submittedCount = messageLogRepository.countDescriptionMessagesByRoundId(round.getRoundId());
-        
-        if (submittedCount >= alivePlayers.size()) {
-            // 모든 설명이 완료되었음을 알림
-            broadcastAllDescriptionsComplete(room.getCode());
-            // 잠시 후 투표 단계로 전환하지 않고 대기 상태로 설정
-            round.setState(Round.RoundState.DESC_COMPLETE);
-            roundRepository.save(round);
-            
-            broadcastRoundStateChange(room.getCode(), "DESC_COMPLETE", 
-                Map.of("message", "모든 설명이 완료되었습니다. 투표를 시작하세요."));
         }
     }
     

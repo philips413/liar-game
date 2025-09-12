@@ -11,8 +11,6 @@ import java.util.List;
 @Repository
 public interface MessageLogRepository extends JpaRepository<MessageLog, Long> {
     
-    List<MessageLog> findByRoomIdOrderByCreatedAtAsc(Long roomId);
-    
     List<MessageLog> findByRoundRoundIdOrderByCreatedAtAsc(Long roundId);
     
     @Query("SELECT m FROM MessageLog m WHERE m.roomId = :roomId AND m.type = :type ORDER BY m.createdAt ASC")
@@ -20,9 +18,6 @@ public interface MessageLogRepository extends JpaRepository<MessageLog, Long> {
     
     @Query("SELECT m FROM MessageLog m WHERE m.round.roundId = :roundId AND m.type = :type ORDER BY m.createdAt ASC")
     List<MessageLog> findByRoundIdAndTypeOrderByCreatedAtAsc(@Param("roundId") Long roundId, @Param("type") MessageLog.MessageType type);
-    
-    @Query("SELECT COUNT(m) FROM MessageLog m WHERE m.round.roundId = :roundId AND m.type = 'DESC'")
-    Integer countDescriptionMessagesByRoundId(@Param("roundId") Long roundId);
     
     // 방 삭제를 위한 메소드들 추가
     void deleteByRoundRoundId(Long roundId);

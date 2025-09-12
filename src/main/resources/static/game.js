@@ -249,7 +249,7 @@ function handleDescriptionPhaseStarted(data) {
     }
     
     // 채팅창 초기화 및 입력 필드 활성화
-    clearChatMessages();
+    // clearChatMessages();
     const descInput = document.getElementById('description-input');
     const submitBtn = document.getElementById('submit-description-btn');
     if (descInput) {
@@ -499,10 +499,10 @@ async function handleSubmitDescription() {
     }
     
     // 중복 제출 방지
-    if (submitBtn.dataset.submitted === 'true') {
-        showNotification('이미 설명이 제출되었습니다.');
-        return;
-    }
+    // if (submitBtn.dataset.submitted === 'true') {
+    //     showNotification('이미 설명이 제출되었습니다.');
+    //     return;
+    // }
     
     try {
         console.log('설명 제출 중:', { playerId: AppState.playerInfo.id, roomCode: AppState.roomInfo.code });
