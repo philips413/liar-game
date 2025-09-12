@@ -144,8 +144,6 @@ function showGameScreen() {
     
     // 대기실 역할 정보도 업데이트 (게임 시작 시 바로 표시하기 위해)
     updateWaitingRoomRoleDisplay();
-    
-    console.log('게임 화면 표시 완료 - 현재 역할:', AppState.playerInfo.role);
 
     // 호스트 여부에 따라 다른 화면 표시
     if (AppState.playerInfo.isHost) {
@@ -681,13 +679,38 @@ function showFinalDefenseCompletePhase(data) {
 
 // 생존/사망 투표 단계 표시
 function showFinalVotingPhase(accusedPlayer) {
+    console.log('showFinalVotingPhase 호출:', {
+        isHost: AppState.playerInfo.isHost,
+        myId: AppState.playerInfo.id,
+        accusedPlayerId: accusedPlayer?.playerId,
+        accusedPlayerName: accusedPlayer?.nickname
+    });
+    
+    const finalVotingPhase = document.getElementById('final-voting-phase');
+    
     // 지목된 플레이어는 투표에 참여하지 않음
     if (accusedPlayer && accusedPlayer.playerId === AppState.playerInfo.id) {
+        // 지목된 플레이어에게는 대기 메시지 표시하고 투표 화면은 숨김
+        if (finalVotingPhase) {
+            finalVotingPhase.classList.add('hidden');
+        }
+        
+        const phaseInfo = document.getElementById('phase-info');
+        if (phaseInfo) {
+            phaseInfo.textContent = '다른 플레이어들이 당신의 운명을 결정하고 있습니다...';
+        }
+        hideMyTurnBadge();
+        
+        // 채팅창에 지목된 플레이어에게 안내 메시지
+        addSystemMessage('당신은 지목되었으므로 투표에 참여할 수 없습니다.', 'warning');
+        addSystemMessage('다른 플레이어들이 당신의 생존/사망을 결정합니다.', 'info');
         return;
     }
     
-    const finalVotingPhase = document.getElementById('final-voting-phase');
-    finalVotingPhase.classList.remove('hidden');
+    // 지목되지 않은 플레이어들 (호스트 포함)에게 투표 화면 표시
+    if (finalVotingPhase) {
+        finalVotingPhase.classList.remove('hidden');
+    }
     
     // "내 차례" 표시 추가 (시니어 친화적) - 지목당한 플레이어가 아닌 경우에만
     if (accusedPlayer && accusedPlayer.playerId !== AppState.playerInfo.id) {
@@ -697,12 +720,18 @@ function showFinalVotingPhase(accusedPlayer) {
     }
     
     if (accusedPlayer) {
-        document.getElementById('final-voting-player-name').textContent = accusedPlayer.nickname;
+        const playerNameElement = document.getElementById('final-voting-player-name');
+        if (playerNameElement) {
+            playerNameElement.textContent = accusedPlayer.nickname;
+        }
     }
     
     // 투표 버튼 활성화
-    document.getElementById('survive-vote-btn').disabled = false;
-    document.getElementById('eliminate-vote-btn').disabled = false;
+    const surviveBtn = document.getElementById('survive-vote-btn');
+    const eliminateBtn = document.getElementById('eliminate-vote-btn');
+    
+    if (surviveBtn) surviveBtn.disabled = false;
+    if (eliminateBtn) eliminateBtn.disabled = false;
 }
 
 // 게임 종료 단계 표시

@@ -386,7 +386,6 @@ public class GamePlayService {
     private void processInitialVoteResult(GameRoom room, Round round, List<Player> alivePlayers) {
         List<Object[]> voteCounts = voteRepository.countVotesByTargetAndRoundId(round.getRoundId(), false);
         
-        
         // 투표 결과를 모든 플레이어에게 표시
         Map<String, Object> voteResult = new HashMap<>();
         List<Map<String, Object>> results = new ArrayList<>();
@@ -428,10 +427,10 @@ public class GamePlayService {
                 .findFirst();
         
         if (majorityVote.isPresent()) {
+            // 과반수 득표자가 있는 경우 - 최후진술로 이동
             Long accusedPlayerId = (Long) majorityVote.get()[0];
             int voteCount = ((Long) majorityVote.get()[1]).intValue();
             Player accusedPlayer = playerRepository.findById(accusedPlayerId).orElse(null);
-            
             
             voteResult.put("outcome", "accused");
             voteResult.put("accusedId", accusedPlayerId);
@@ -457,10 +456,9 @@ public class GamePlayService {
                         .count();
                 
                 if (topVoteCount >= 2 && topVoteCounters == 1) {
-                    // 과반수는 아니지만 최다 득표자를 지목 (2표 이상 + 단독)
+                    // 과반수는 아니지만 최다 득표자를 지목 (2표 이상 + 단독) - 최후진술로 이동
                     Long accusedPlayerId = (Long) topVote[0];
                     Player accusedPlayer = playerRepository.findById(accusedPlayerId).orElse(null);
-                    
                     
                     voteResult.put("outcome", "accused");
                     voteResult.put("accusedId", accusedPlayerId);
@@ -576,6 +574,8 @@ public class GamePlayService {
         } else {
             // 과반수 미달 -> 생존
             finalVoteResult.put("outcome", "survived");
+            finalVoteResult.put("survivedName", accused.getNickname());
+            finalVoteResult.put("accusedName", accused.getNickname());
             finalVoteResult.put("message", String.format("%s님이 생존했습니다. (사망 %d표, 생존 %d표)", 
                     accused.getNickname(), eliminateVotes, surviveVotes));
             broadcastVoteResult(room.getCode(), finalVoteResult);
@@ -776,7 +776,9 @@ public class GamePlayService {
     }
     
     private void broadcastVoteResult(String roomCode, Map<String, Object> voteResult) {
-        GameMessage message = GameMessage.of("VOTE_RESULT", roomCode, voteResult);
+        // 생존/사망 투표 결과인지 확인
+        String messageType = voteResult.containsKey("outcome") ? "FINAL_VOTE_RESULT" : "VOTE_RESULT";
+        GameMessage message = GameMessage.of(messageType, roomCode, voteResult);
         messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
     }
     
