@@ -236,7 +236,8 @@ function handleGameStarted(data) {
 
 // 설명 단계 시작 처리
 function handleDescriptionPhaseStarted(data) {
-    console.log('설명 단계 시작:', data);
+    const gameData = data.data || data;
+    console.log('설명 단계 시작:', gameData);
     
     // 호스트 시작 컨트롤 숨김
     const hostStartControls = document.getElementById('host-start-controls');
@@ -260,7 +261,6 @@ function handleDescriptionPhaseStarted(data) {
     
     // 모든 플레이어에게 설명 단계 표시
     showDescriptionPhase();
-    addSystemMessage('호스트가 한번 더 설명을 요청했습니다.', 'description');
 }
 
 // 라운드 상태 업데이트
@@ -274,10 +274,23 @@ function handleRoundStateUpdate(data) {
         AppState.roomInfo.currentRound = gameData.currentRound;
     }
 
-    const descInput = document.getElementById('description-input');
-    descInput.disabled = false;
-    const submitBtn = document.getElementById('submit-description-btn');
-    submitBtn.disabled = false;
+    // 설명 단계인 경우 모든 플레이어의 입력 필드 활성화
+    if (gameData.state === 'DESC') {
+        const descInput = document.getElementById('description-input');
+        const submitBtn = document.getElementById('submit-description-btn');
+        
+        if (descInput) {
+            descInput.disabled = false;
+            // 추가 설명 허용 시에는 입력 필드 초기화하지 않음 (기존 설명 유지)
+        }
+        
+        if (submitBtn) {
+            // 추가 설명 허용 시 제출 상태 초기화
+            submitBtn.dataset.submitted = 'false';
+            submitBtn.disabled = !descInput || descInput.value.trim().length === 0;
+            submitBtn.textContent = '단어 설명';
+        }
+    }
 
     updateGamePhaseDisplay(gameData);
 }
@@ -592,19 +605,6 @@ async function handleAllowMoreDescriptions() {
         // 호스트 액션 버튼 제거
         clearHostActionButtons();
         
-        // 설명 입력 필드 다시 활성화
-        const descInput = document.getElementById('description-input');
-        const submitBtn = document.getElementById('submit-description-btn');
-        
-        if (descInput && submitBtn) {
-            descInput.disabled = false;
-            submitBtn.disabled = true; // 초기에는 비활성화
-            submitBtn.dataset.submitted = 'false';
-            submitBtn.textContent = '단어 설명';
-        }
-        
-        // 시스템 메시지 추가
-        addSystemMessage('호스트가 추가 설명을 허용했습니다. 더 자세한 설명을 작성해주세요!', 'description');
         
     } catch (error) {
         console.error('추가 설명 허용 오류:', error);

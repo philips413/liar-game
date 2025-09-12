@@ -362,9 +362,15 @@ public class GamePlayService {
         currentRound.setState(Round.RoundState.DESC);
         roundRepository.save(currentRound);
         
-        // 모든 플레이어에게 추가 설명 허용 알림
+        // 라운드 상태 변경 브로드캐스트 (모든 플레이어의 입력 필드 활성화)
+        broadcastRoundStateChange(roomCode, "DESC", Map.of(
+            "message", "호스트가 추가 설명을 허용했습니다",
+            "currentRound", room.getCurrentRound()
+        ));
+        
+        // 추가로 설명 단계 시작 메시지도 전송 (기존 호환성 유지)
         GameMessage message = GameMessage.of("DESCRIPTION_PHASE_STARTED", roomCode, Map.of(
-            "message", ""
+            "message", "호스트가 추가 설명을 허용했습니다"
         ));
         messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
         
