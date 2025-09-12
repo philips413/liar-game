@@ -28,35 +28,18 @@ public class GamePlayService {
     private final SimpMessageSendingOperations messagingTemplate;
 
     public void submitDescription(String roomCode, Long playerId, String description) {
-        System.out.println("=== submitDescription 시작 ===");
-        System.out.println("roomCode: " + roomCode);
-        System.out.println("playerId: " + playerId);
-        System.out.println("description: " + description);
-        
         GameRoom room = gameRoomRepository.findByCode(roomCode)
                 .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
-        System.out.println("방 찾음: " + room.getRoomId() + ", 상태: " + room.getState() + ", 현재라운드: " + room.getCurrentRound());
         
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new RuntimeException("플레이어를 찾을 수 없습니다"));
-        System.out.println("플레이어 찾음: " + player.getNickname() + ", 생존: " + player.getIsAlive());
         
         if (!player.getIsAlive()) {
             throw new RuntimeException("사망한 플레이어는 발언할 수 없습니다");
         }
         
-        System.out.println("라운드 조회 시도: roomCode=" + roomCode + ", idx=" + room.getCurrentRound());
         Round currentRound = roundRepository.findByRoomCodeAndIdx(roomCode, room.getCurrentRound())
-                .orElseThrow(() -> {
-                    System.out.println("라운드 조회 실패: roomCode=" + roomCode + ", idx=" + room.getCurrentRound());
-                    System.out.println("현재 방의 모든 라운드 확인:");
-                    var allRounds = roundRepository.findByRoomCodeOrderByIdxAsc(roomCode);
-                    for (var round : allRounds) {
-                        System.out.println("- 라운드 " + round.getIdx() + ": " + round.getState());
-                    }
-                    return new RuntimeException("현재 라운드를 찾을 수 없습니다. 방 코드: " + roomCode + ", 라운드: " + room.getCurrentRound());
-                });
-        System.out.println("라운드 찾음: " + currentRound.getRoundId() + ", 상태: " + currentRound.getState());
+                .orElseThrow(() -> new RuntimeException("현재 라운드를 찾을 수 없습니다. 방 코드: " + roomCode + ", 라운드: " + room.getCurrentRound()));
         
         MessageLog message = MessageLog.builder()
                 .roomId(room.getRoomId())
@@ -368,12 +351,6 @@ public class GamePlayService {
             "currentRound", room.getCurrentRound()
         ));
         
-        // 추가로 설명 단계 시작 메시지도 전송 (기존 호환성 유지)
-        GameMessage message = GameMessage.of("DESCRIPTION_PHASE_STARTED", roomCode, Map.of(
-            "message", "호스트가 추가 설명을 허용했습니다"
-        ));
-        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
-        
         logAudit(room.getRoomId(), hostId, "ALLOW_MORE_DESCRIPTIONS", "Host allowed more descriptions");
     }
 
@@ -399,20 +376,16 @@ public class GamePlayService {
         
         if (voteCount >= alivePlayers.size()) {
             if (isFinalVote) {
-                processJudgment(room, round);
+                processJudgment(room, round, alivePlayers);  // Pass alivePlayers to avoid redundant query
             } else {
-                processInitialVoteResult(room, round);
+                processInitialVoteResult(room, round, alivePlayers);  // Pass alivePlayers to avoid redundant query
             }
         }
     }
     
-    private void processInitialVoteResult(GameRoom room, Round round) {
+    private void processInitialVoteResult(GameRoom room, Round round, List<Player> alivePlayers) {
         List<Object[]> voteCounts = voteRepository.countVotesByTargetAndRoundId(round.getRoundId(), false);
-        List<Player> alivePlayers = playerRepository.findAlivePlayersByRoomCode(room.getCode());
         
-        System.out.println("=== 투표 결과 처리 시작 ===");
-        System.out.println("생존 플레이어 수: " + alivePlayers.size());
-        System.out.println("투표 결과 개수: " + voteCounts.size());
         
         // 투표 결과를 모든 플레이어에게 표시
         Map<String, Object> voteResult = new HashMap<>();
@@ -422,8 +395,6 @@ public class GamePlayService {
             Long targetId = (Long) voteCount[0];
             Long count = (Long) voteCount[1];
             Player target = playerRepository.findById(targetId).orElse(null);
-            
-            System.out.println("투표 결과: " + (target != null ? target.getNickname() : "Unknown") + " - " + count + "표");
             
             if (target != null) {
                 Map<String, Object> result = new HashMap<>();
@@ -447,7 +418,6 @@ public class GamePlayService {
         // 과반수 계산: 전체 생존 플레이어의 절반 초과
         int totalVoters = alivePlayers.size();
         int requiredVotes = (totalVoters / 2) + 1;
-        System.out.println("과반수를 위한 필요 투표 수: " + requiredVotes + " (전체: " + totalVoters + "명)");
         
         // 투표 결과를 내림차순 정렬 (최다 득표 순)
         voteCounts.sort((a, b) -> ((Long) b[1]).compareTo((Long) a[1]));
@@ -462,7 +432,6 @@ public class GamePlayService {
             int voteCount = ((Long) majorityVote.get()[1]).intValue();
             Player accusedPlayer = playerRepository.findById(accusedPlayerId).orElse(null);
             
-            System.out.println("과반수 득표자: " + (accusedPlayer != null ? accusedPlayer.getNickname() : "Unknown") + " (" + voteCount + "표)");
             
             voteResult.put("outcome", "accused");
             voteResult.put("accusedId", accusedPlayerId);
@@ -492,7 +461,6 @@ public class GamePlayService {
                     Long accusedPlayerId = (Long) topVote[0];
                     Player accusedPlayer = playerRepository.findById(accusedPlayerId).orElse(null);
                     
-                    System.out.println("최다 득표자 지목: " + (accusedPlayer != null ? accusedPlayer.getNickname() : "Unknown") + " (" + topVoteCount + "표)");
                     
                     voteResult.put("outcome", "accused");
                     voteResult.put("accusedId", accusedPlayerId);
@@ -507,7 +475,6 @@ public class GamePlayService {
                     logAudit(room.getRoomId(), null, "PLAYER_ACCUSED", 
                             String.format("accused: %d, votes: %d (plurality)", accusedPlayerId, topVoteCount));
                 } else {
-                    System.out.println("과반수 득표자 없음 - 다음 라운드 진행");
                     voteResult.put("outcome", "no_majority");
                     if (topVoteCounters > 1) {
                         voteResult.put("message", "동점으로 인해 지목된 플레이어가 없습니다. 다음 라운드로 진행합니다.");
@@ -523,20 +490,15 @@ public class GamePlayService {
             }
         }
         
-        System.out.println("=== 투표 결과 처리 완료 ===");
         broadcastVoteResult(room.getCode(), voteResult);
     }
     
-    private void processJudgment(GameRoom room, Round round) {
+    private void processJudgment(GameRoom room, Round round, List<Player> alivePlayers) {
         Player accused = playerRepository.findById(round.getAccusedPlayerId())
                 .orElseThrow(() -> new RuntimeException("지목된 플레이어를 찾을 수 없습니다"));
         
         // 생존/사망 투표 결과 집계 (decision 필드 기반)
         List<Vote> finalVotes = voteRepository.findByRoundAndIsFinalVote(round, true);
-        
-        System.out.println("=== 최후진술 후 투표 결과 처리 시작 ===");
-        System.out.println("지목된 플레이어: " + accused.getNickname());
-        System.out.println("총 투표 수: " + finalVotes.size());
         
         int eliminateVotes = 0;
         int surviveVotes = 0;
@@ -551,8 +513,6 @@ public class GamePlayService {
                 surviveVotes++;
             }
         }
-        
-        System.out.println("사망 투표: " + eliminateVotes + "표, 생존 투표: " + surviveVotes + "표");
         
         // 투표 결과 정보 구성
         Map<String, Object> eliminateResult = new HashMap<>();
@@ -574,7 +534,6 @@ public class GamePlayService {
         ));
         
         if (finalVotes.isEmpty()) {
-            System.out.println("투표가 없어 생존 처리");
             finalVoteResult.put("outcome", "survived");
             finalVoteResult.put("message", accused.getNickname() + "님이 생존했습니다. (투표 없음)");
             broadcastVoteResult(room.getCode(), finalVoteResult);
@@ -582,17 +541,12 @@ public class GamePlayService {
             return;
         }
         
-        // 투표할 수 있는 플레이어 수 (생존자 - 지목당한 플레이어)
-        List<Player> alivePlayers = playerRepository.findAlivePlayersByRoomCode(room.getCode());
+        // 투표할 수 있는 플레이어 수 (생존자 - 지목당한 플레이어) - Use passed parameter instead of querying again
         int eligibleVoters = alivePlayers.size() - 1; // 지목당한 플레이어 제외
         int requiredEliminateVotes = (eligibleVoters / 2) + 1; // 과반수
         
-        System.out.println("투표 가능 인원: " + eligibleVoters + "명, 처형을 위한 필요 투표 수: " + requiredEliminateVotes);
-        
         if (eliminateVotes >= requiredEliminateVotes) {
             // 과반수가 사망에 투표 -> 처형
-            System.out.println("과반수 사망 투표로 처형 결정");
-            
             accused.setIsAlive(false);
             playerRepository.save(accused);
             
@@ -612,18 +566,15 @@ public class GamePlayService {
             // 게임 종료 조건 확인
             if (accused.getRole() == Player.PlayerRole.LIAR) {
                 // 라이어가 처형되면 시민 승리
-                System.out.println("라이어 처형 - 시민 승리");
                 endGameWithResult(room, "CITIZENS", accused);
                 return;
             } else {
                 // 시민이 처형된 경우 게임 계속
-                System.out.println("시민 처형 - 게임 계속");
-                checkRemainingPlayersAndProceed(room);
+                checkRemainingPlayersAndProceed(room, alivePlayers);
                 return;
             }
         } else {
             // 과반수 미달 -> 생존
-            System.out.println("과반수 미달로 생존 처리");
             finalVoteResult.put("outcome", "survived");
             finalVoteResult.put("message", String.format("%s님이 생존했습니다. (사망 %d표, 생존 %d표)", 
                     accused.getNickname(), eliminateVotes, surviveVotes));
@@ -634,15 +585,14 @@ public class GamePlayService {
         round.setState(Round.RoundState.END);
         round.setEndedAt(LocalDateTime.now());
         roundRepository.save(round);
-        
-        System.out.println("=== 최후진술 후 투표 결과 처리 완료 ===");
     }
     
-    private void checkRemainingPlayersAndProceed(GameRoom room) {
-        List<Player> alivePlayers = playerRepository.findAlivePlayersByRoomCode(room.getCode());
-        if (alivePlayers.size() < 3) {
+    private void checkRemainingPlayersAndProceed(GameRoom room, List<Player> alivePlayers) {
+        // Remove one dead player from the alive count since accused was just eliminated
+        List<Player> currentAlivePlayers = playerRepository.findAlivePlayersByRoomCode(room.getCode());
+        if (currentAlivePlayers.size() < 3) {
             // 생존 플레이어가 3명 미만이면 라이어 승리
-            Player liar = alivePlayers.stream()
+            Player liar = currentAlivePlayers.stream()
                     .filter(p -> p.getRole() == Player.PlayerRole.LIAR)
                     .findFirst()
                     .orElse(null);
@@ -666,16 +616,8 @@ public class GamePlayService {
             room.setCurrentRound(room.getCurrentRound() + 1);
             gameRoomRepository.save(room);
             
-            // 3초 후 다음 라운드 시작 알림
+            // 다음 라운드 시작 알림
             broadcastRoundTransition(room.getCode(), room.getCurrentRound());
-            
-            // 실제 라운드 시작은 약간의 지연 후 (클라이언트에서 처리)
-            try {
-                Thread.sleep(3000); // 3초 대기
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            
             startNewRound(room, room.getCurrentRound());
         }
     }

@@ -74,11 +74,6 @@ function subscribeToRoom() {
             handleWebSocketMessage(data);
         });
         
-        // 개인 메시지 구독 (역할별 게임 종료 메시지용) - 주석 처리 (현재는 방 전체 브로드캐스트 사용)
-        // AppState.stompClient.subscribe(`/user/queue/personal`, function(message) {
-        //     const data = JSON.parse(message.body);
-        //     handleWebSocketMessage(data);
-        // });
         
         console.log(`방 토픽 구독: /topic/rooms/${AppState.roomInfo.code}`);
     }
@@ -161,7 +156,6 @@ function handlePlayerJoined(data) {
     }
     
     updatePlayersList();
-    // showNotification(`${player.nickname}님이 참가했습니다.`);
 }
 
 // 플레이어 퇴장 처리
@@ -249,12 +243,12 @@ function handleDescriptionPhaseStarted(data) {
     const descInput = document.getElementById('description-input');
     const submitBtn = document.getElementById('submit-description-btn');
     if (descInput) {
-        descInput.disabled = false;
+        descInput.disabled = true;
         descInput.value = '';
     }
 
     if (submitBtn) {
-        submitBtn.disabled = false; // 초기에는 비활성화
+        submitBtn.disabled = true; // 초기에는 비활성화
         submitBtn.dataset.submitted = 'false';
         submitBtn.textContent = '단어 설명';
     }
@@ -281,13 +275,12 @@ function handleRoundStateUpdate(data) {
         
         if (descInput) {
             descInput.disabled = false;
-            // 추가 설명 허용 시에는 입력 필드 초기화하지 않음 (기존 설명 유지)
         }
         
         if (submitBtn) {
             // 추가 설명 허용 시 제출 상태 초기화
             submitBtn.dataset.submitted = 'false';
-            submitBtn.disabled = !descInput || descInput.value.trim().length === 0;
+            submitBtn.disabled = false;
             submitBtn.textContent = '단어 설명';
         }
     }
