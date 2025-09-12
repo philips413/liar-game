@@ -137,9 +137,6 @@ function handleWebSocketMessage(data) {
         case 'DESC_UPDATE':
             handleDescriptionUpdate(data);
             break;
-        case 'HOST_DESCRIPTION_OPTIONS':
-            handleHostDescriptionOptions(data);
-            break;
         default:
             console.warn('알 수 없는 메시지 타입:', data.type);
     }
@@ -254,15 +251,16 @@ function handleDescriptionPhaseStarted(data) {
         descInput.disabled = false;
         descInput.value = '';
     }
+
     if (submitBtn) {
-        submitBtn.disabled = true; // 초기에는 비활성화
+        submitBtn.disabled = false; // 초기에는 비활성화
         submitBtn.dataset.submitted = 'false';
         submitBtn.textContent = '단어 설명';
     }
     
     // 모든 플레이어에게 설명 단계 표시
     showDescriptionPhase();
-    addSystemMessage('설명 단계가 시작되었습니다! 받은 단어에 대해 설명해주세요.', 'description');
+    addSystemMessage('호스트가 한번 더 설명을 요청했습니다.', 'description');
 }
 
 // 라운드 상태 업데이트
@@ -292,8 +290,13 @@ function handleAllDescriptionsComplete(data) {
     
     // 모든 플레이어의 설명이 완료되었음을 호스트에게 알림
     if (AppState.playerInfo.isHost) {
-        addHostStatusMessage('모든 플레이어의 설명이 완료되었습니다.', 'success');
-        setHostActionButton('🗳️ 투표 시작', handleStartVoting);
+        addHostStatusMessage('모든 플레이어의 설명이 완료되었습니다.\n한번 더 작성하시겠습니까?', 'info');
+        
+        // 호스트 컨트롤 영역에 버튼 표시
+        setHostActionButtons([
+            { text: '허용하기', action: handleAllowMoreDescriptions, type: 'success' },
+            { text: '투표하기', action: handleStartVoting, type: 'primary' }
+        ]);
     }
     
     // UI 업데이트
@@ -567,6 +570,45 @@ async function handleSubmitDescription() {
         } else {
             showNotification(error.message || '설명 제출 중 오류가 발생했습니다.');
         }
+    }
+}
+
+// 추가 설명 허용 (호스트)
+async function handleAllowMoreDescriptions() {
+    if (!AppState.playerInfo.isHost) {
+        showNotification('호스트만 추가 설명을 허용할 수 있습니다.');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/actions/allow-more-descriptions?hostId=${AppState.playerInfo.id}`, {
+            method: 'POST'
+        });
+        
+        if (!response.ok) {
+            throw new Error('추가 설명 허용에 실패했습니다.');
+        }
+        
+        // 호스트 액션 버튼 제거
+        clearHostActionButtons();
+        
+        // 설명 입력 필드 다시 활성화
+        const descInput = document.getElementById('description-input');
+        const submitBtn = document.getElementById('submit-description-btn');
+        
+        if (descInput && submitBtn) {
+            descInput.disabled = false;
+            submitBtn.disabled = true; // 초기에는 비활성화
+            submitBtn.dataset.submitted = 'false';
+            submitBtn.textContent = '단어 설명';
+        }
+        
+        // 시스템 메시지 추가
+        addSystemMessage('호스트가 추가 설명을 허용했습니다. 더 자세한 설명을 작성해주세요!', 'description');
+        
+    } catch (error) {
+        console.error('추가 설명 허용 오류:', error);
+        showNotification(error.message);
     }
 }
 
@@ -900,8 +942,10 @@ function handleVotingStarted(data) {
     const gameData = data.data || data;
     console.log('투표 시작 웹소켓 메시지:', gameData);
     
-    // 호스트 채팅 메시지 제거
-    removeHostChatMessages();
+    // 호스트 액션 버튼 제거
+    if (AppState.playerInfo.isHost) {
+        clearHostActionButtons();
+    }
     
     addSystemMessage('투표를 시작합니다! 라이어를 찾아 투표해주세요.', 'voting');
     
@@ -1067,144 +1111,4 @@ function handleDescriptionUpdate(data) {
     }
 }
 
-// 호스트 전용 설명 완료 옵션 처리
-function handleHostDescriptionOptions(data) {
-    console.log('[DEBUG] handleHostDescriptionOptions 호출됨');
-    console.log('[DEBUG] 받은 데이터:', data);
-    console.log('[DEBUG] 현재 플레이어 정보:', AppState.playerInfo);
-    
-    const messageData = data.data || data;
-    console.log('[DEBUG] messageData:', messageData);
-    
-    // 호스트 ID 확인하여 현재 플레이어가 호스트인지 검증
-    if (messageData.hostId && messageData.hostId !== AppState.playerInfo.id) {
-        console.log('[DEBUG] 호스트 전용 메시지 - 현재 플레이어는 호스트가 아님');
-        console.log('[DEBUG] messageData.hostId:', messageData.hostId, '내 ID:', AppState.playerInfo.id);
-        return;
-    }
-    
-    // 추가 안전장치: isHost 체크
-    if (!AppState.playerInfo.isHost) {
-        console.log('[DEBUG] 호스트 전용 메시지 - isHost false');
-        return;
-    }
-    
-    console.log('[DEBUG] 호스트 인증 통과, 메시지 표시 진행');
-    
-    // 채팅창에 호스트 전용 메시지와 버튼 표시
-    if (messageData.message && messageData.buttons) {
-        console.log('[DEBUG] addHostChatMessage 호출');
-        addHostChatMessage(messageData.message, messageData.buttons);
-    } else {
-        console.log('[DEBUG] message 또는 buttons가 없음:', messageData.message, messageData.buttons);
-    }
-}
 
-// 호스트 전용 채팅 메시지 추가 (버튼 포함)
-function addHostChatMessage(message, buttons) {
-    console.log('[DEBUG] addHostChatMessage 시작');
-    console.log('[DEBUG] message:', message, 'buttons:', buttons);
-    
-    const chatMessages = document.getElementById('chat-messages');
-    if (!chatMessages) {
-        console.log('[DEBUG] chat-messages 요소를 찾을 수 없음');
-        return;
-    }
-    console.log('[DEBUG] chat-messages 요소 찾음');
-    
-    const messageElement = document.createElement('div');
-    messageElement.className = 'host-chat-message';
-    messageElement.style.cssText = `
-        background: linear-gradient(45deg, #ffd700, #ffed4e);
-        border: 2px solid #f39c12;
-        border-radius: 12px;
-        padding: 15px;
-        margin: 10px 0;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    `;
-    
-    const messageText = document.createElement('div');
-    messageText.textContent = message;
-    messageText.style.cssText = `
-        color: #8b4513;
-        font-weight: bold;
-        font-size: 16px;
-        margin-bottom: 10px;
-        text-align: center;
-    `;
-    
-    messageElement.appendChild(messageText);
-    
-    // 버튼 컨테이너
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.cssText = `
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        margin-top: 10px;
-    `;
-    
-    // 버튼들 생성
-    buttons.forEach(button => {
-        const btn = document.createElement('button');
-        btn.textContent = button.text;
-        btn.style.cssText = `
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            min-width: 100px;
-        `;
-        
-        if (button.id === 'allow') {
-            btn.style.cssText += `
-                background: #2ecc71;
-                color: white;
-            `;
-            btn.addEventListener('mouseenter', () => {
-                btn.style.backgroundColor = '#27ae60';
-                btn.style.transform = 'scale(1.05)';
-            });
-            btn.addEventListener('mouseleave', () => {
-                btn.style.backgroundColor = '#2ecc71';
-                btn.style.transform = 'scale(1)';
-            });
-        } else if (button.id === 'vote') {
-            btn.style.cssText += `
-                background: #e74c3c;
-                color: white;
-            `;
-            btn.addEventListener('mouseenter', () => {
-                btn.style.backgroundColor = '#c0392b';
-                btn.style.transform = 'scale(1.05)';
-            });
-            btn.addEventListener('mouseleave', () => {
-                btn.style.backgroundColor = '#e74c3c';
-                btn.style.transform = 'scale(1)';
-            });
-            btn.onclick = () => handleStartVoting();
-        }
-        
-        buttonContainer.appendChild(btn);
-    });
-    
-    messageElement.appendChild(buttonContainer);
-    
-    console.log('[DEBUG] 호스트 메시지 요소 생성 완료');
-    chatMessages.appendChild(messageElement);
-    
-    // 스크롤을 최신 메시지로 이동
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-    console.log('[DEBUG] 호스트 메시지 채팅창에 추가 완료');
-}
-
-// 호스트 채팅 메시지 제거
-function removeHostChatMessages() {
-    const hostMessages = document.querySelectorAll('.host-chat-message');
-    hostMessages.forEach(message => {
-        message.remove();
-    });
-}

@@ -15,6 +15,18 @@ public class GameActionController {
     
     private final GamePlayService gamePlayService;
 
+    @PostMapping("/allow-more-descriptions")
+    public ResponseEntity<Map<String, String>> allowMoreDescriptions(
+            @PathVariable String roomCode,
+            @RequestParam Long hostId) {
+        try {
+            gamePlayService.allowMoreDescriptions(roomCode, hostId);
+            return ResponseEntity.ok(Map.of("message", "추가 설명이 허용되었습니다"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/start-voting")
     public ResponseEntity<Map<String, String>> startVoting(@PathVariable String roomCode) {
         try {

@@ -73,6 +73,9 @@ public class GamePlayService {
         
         // 실시간으로 다른 플레이어들에게 설명 업데이트 전송
         sendDescriptionUpdate(roomCode, player, description);
+        
+        // 모든 플레이어가 설명을 제출했는지 확인
+        checkAllDescriptionsComplete(room, currentRound);
 
     }
     
@@ -337,6 +340,37 @@ public class GamePlayService {
         }
     }
     
+    public void allowMoreDescriptions(String roomCode, Long hostId) {
+        GameRoom room = gameRoomRepository.findByCode(roomCode)
+                .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
+        
+        Player host = playerRepository.findById(hostId)
+                .orElseThrow(() -> new RuntimeException("호스트를 찾을 수 없습니다"));
+        
+        if (!host.getIsHost()) {
+            throw new RuntimeException("호스트만 추가 설명을 허용할 수 있습니다");
+        }
+        
+        Round currentRound = roundRepository.findByRoomCodeAndIdx(roomCode, room.getCurrentRound())
+                .orElseThrow(() -> new RuntimeException("현재 라운드를 찾을 수 없습니다"));
+        
+        if (currentRound.getState() != Round.RoundState.DESC_COMPLETE) {
+            throw new RuntimeException("모든 설명이 완료되지 않은 상태입니다");
+        }
+        
+        // 라운드 상태를 다시 설명 진행 중으로 변경
+        currentRound.setState(Round.RoundState.DESC);
+        roundRepository.save(currentRound);
+        
+        // 모든 플레이어에게 추가 설명 허용 알림
+        GameMessage message = GameMessage.of("DESCRIPTION_PHASE_STARTED", roomCode, Map.of(
+            "message", ""
+        ));
+        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
+        
+        logAudit(room.getRoomId(), hostId, "ALLOW_MORE_DESCRIPTIONS", "Host allowed more descriptions");
+    }
+
     public void startVoting(String roomCode) {
         GameRoom room = gameRoomRepository.findByCode(roomCode)
                 .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
@@ -844,6 +878,38 @@ public class GamePlayService {
         
         log.info("DESC_UPDATE 메시지 전송: roomCode={}, player={}, description={}", 
                 roomCode, player.getNickname(), description);
+    }
+    
+    /**
+     * 모든 플레이어가 설명을 완료했는지 확인하고, 완료되었을 때 호스트에게 옵션 제공
+     */
+    private void checkAllDescriptionsComplete(GameRoom room, Round round) {
+        // 생존한 플레이어 수 확인
+        List<Player> alivePlayers = playerRepository.findAlivePlayersByRoomCode(room.getCode());
+        
+        // 현재 라운드에서 설명을 제출한 플레이어 수 확인
+        long descriptionsCount = messageLogRepository.countByRoomIdAndRoundAndType(
+                room.getRoomId(), round, MessageLog.MessageType.DESC);
+        
+        log.info("설명 완료 확인: 생존자 {}명, 설명 제출 {}개", alivePlayers.size(), descriptionsCount);
+        
+        // 모든 생존 플레이어가 설명을 제출했는지 확인
+        if (descriptionsCount >= alivePlayers.size()) {
+            log.info("모든 설명 완료 - 호스트에게 옵션 제공");
+            
+            // 라운드 상태를 설명 완료로 변경
+            round.setState(Round.RoundState.DESC_COMPLETE);
+            roundRepository.save(round);
+            
+            // 모든 플레이어에게 설명 완료 알림
+            GameMessage allCompleteMessage = GameMessage.of("ALL_DESCRIPTIONS_COMPLETE", room.getCode(), Map.of(
+                "message", "모든 플레이어의 설명이 완료되었습니다"
+            ));
+            messagingTemplate.convertAndSend("/topic/rooms/" + room.getCode(), allCompleteMessage);
+            
+            logAudit(room.getRoomId(), null, "ALL_DESCRIPTIONS_COMPLETE", 
+                    String.format("총 %d개 설명 완료", descriptionsCount));
+        }
     }
 
 }

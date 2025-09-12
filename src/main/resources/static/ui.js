@@ -372,10 +372,7 @@ function showDescriptionPhaseWithoutModal() {
 function showDescriptionPhase() {
     const descriptionPhase = document.getElementById('description-phase');
     descriptionPhase.classList.remove('hidden');
-    
-    // "내 차례" 표시 추가 (시니어 친화적)
-    showMyTurnBadge("단어를 설명할 차례입니다!");
-    
+
     // 모달 내 입력 필드 초기화
     const modalDescInput = document.getElementById('modal-description-input');
     if (modalDescInput) {
@@ -457,48 +454,15 @@ function showDescriptionCompletePhase() {
     
     const descCompletePhase = document.getElementById('description-complete-phase');
     
-    // 이미 표시된 상태라면 중복 메시지 방지
-    if (!descCompletePhase.classList.contains('hidden')) {
-        return;
+    if (descCompletePhase) {
+        descCompletePhase.classList.remove('hidden');
     }
-    
-    descCompletePhase.classList.remove('hidden');
     
     if (AppState.playerInfo.isHost) {
-        // 호스트 컨트롤 패널에 완료 메시지와 투표 시작 버튼 표시
-        addHostStatusMessage('모든 플레이어의 설명이 완료되었습니다.', 'success');
-        setHostActionButton('🗳️ 투표 시작', handleStartVoting);
+        // 호스트 컨트롤 패널에 완료 메시지와 투표 시작 버튼 표시 (중복 제거)
+        // addHostStatusMessage('모든 플레이어의 설명이 완료되었습니다.', 'success');
+        // setHostActionButton('🗳️ 투표 시작', handleStartVoting);
     }
-}
-
-// 호스트 컨트롤 버튼 강화
-function enhanceHostControls() {
-    const startVotingBtn = document.getElementById('start-voting-btn');
-    
-    if (startVotingBtn) {
-        startVotingBtn.innerHTML = '🗳️ 투표 시작';
-        startVotingBtn.title = '라이어를 찾기 위한 투표를 시작합니다';
-    }
-}
-
-// 모든 설명 표시
-function displayAllDescriptions(descriptions) {
-    const descriptionsContainer = document.getElementById('all-descriptions');
-    if (!descriptionsContainer) return;
-    
-    // descriptions가 undefined이거나 배열이 아닌 경우 안전 처리
-    if (!descriptions || !Array.isArray(descriptions)) {
-        console.warn('설명 데이터가 올바르지 않습니다:', descriptions);
-        descriptionsContainer.innerHTML = '<div class="description-item">설명을 불러올 수 없습니다.</div>';
-        return;
-    }
-    
-    descriptionsContainer.innerHTML = descriptions.map(desc => `
-        <div class="description-item">
-            <div class="description-author">${desc.playerNickname}</div>
-            <div class="description-text">${desc.text}</div>
-        </div>
-    `).join('');
 }
 
 // 투표 단계 표시
@@ -1350,11 +1314,13 @@ function addHostStatusMessage(message, type = 'info') {
     
     const statusArea = document.getElementById('host-status-area');
     if (!statusArea) return;
-    
+
+    clearHostStatusMessages();
+
     const messageDiv = document.createElement('div');
     messageDiv.className = `host-status-message ${type}`;
     messageDiv.textContent = message;
-    
+
     statusArea.appendChild(messageDiv);
     
     // 스크롤을 최하단으로 이동

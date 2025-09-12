@@ -1,6 +1,7 @@
 package com.liargame.domain.repository;
 
 import com.liargame.domain.entity.MessageLog;
+import com.liargame.domain.entity.Round;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +13,9 @@ import java.util.List;
 public interface MessageLogRepository extends JpaRepository<MessageLog, Long> {
     
     List<MessageLog> findByRoundRoundIdOrderByCreatedAtAsc(Long roundId);
+    
+    // 특정 방의 라운드에서 특정 타입의 메시지 개수 조회
+    long countByRoomIdAndRoundAndType(Long roomId, Round round, MessageLog.MessageType type);
     
     // 방 삭제를 위한 메소드들 추가
     void deleteByRoundRoundId(Long roundId);
