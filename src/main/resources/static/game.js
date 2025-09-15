@@ -335,17 +335,19 @@ function handleVoteResult(data) {
     // displayVoteResult(gameData);
 
     displayVoteResultInChat(gameData);
-    
-    // 지목자가 있으면 최후진술 팝업 자동 표시
-    if (gameData.accusedName && gameData.accusedId) {
+
+    // 최후진술 투표 결과가 아닌 경우에만 지목자가 있으면 최후진술 팝업 자동 표시
+    const isFinalVote = gameData.isFinalVote || gameData.eliminatedId || gameData.outcome === 'eliminated' || gameData.outcome === 'survived';
+
+    if (!isFinalVote && gameData.accusedName && gameData.accusedId) {
         const accusedPlayer = {
             playerId: gameData.accusedId,
             nickname: gameData.accusedName
         };
-        
-        console.log('지목자 정보:', accusedPlayer);
+
+        console.log('일반 투표 결과 - 지목자 정보:', accusedPlayer);
         console.log('현재 플레이어 ID:', AppState.playerInfo.id);
-        
+
         // 3초 후에 최후진술 팝업 표시 (투표 결과를 보여준 후)
         setTimeout(() => {
             if (gameData.accusedId === AppState.playerInfo.id) {
@@ -356,6 +358,8 @@ function handleVoteResult(data) {
             // 최후진술 단계 화면으로 전환
             showFinalDefensePhase(accusedPlayer);
         }, 3000);
+    } else if (isFinalVote) {
+        console.log('생존/사망 투표 결과 - 최후진술 팝업 실행 안함');
     } else {
         console.log('지목자 없음 또는 데이터 누락:', {
             accusedName: gameData.accusedName,
@@ -1133,25 +1137,55 @@ function displayVoteResultInHostPanel(gameData) {
     if (!AppState.playerInfo.isHost) {
         return; // 호스트가 아니면 무시
     }
-    
+
     console.log('투표 결과를 호스트 패널에 표시:', gameData);
-    
-    // 투표 결과 메시지 구성
+
+    // 최후진술 투표 결과인지 확인
+    const isFinalVote = gameData.isFinalVote || gameData.eliminatedId || gameData.outcome === 'eliminated' || gameData.outcome === 'survived';
+
+    if (isFinalVote) {
+        console.log('최후진술 투표 결과 처리');
+
+        // 최후진술 투표 결과 메시지
+        let finalVoteMessage = '⚖️ 생존/사망 투표 결과: ';
+
+        if (gameData.outcome === 'eliminated') {
+            finalVoteMessage += `${gameData.eliminatedName || '플레이어'}가 사망했습니다.`;
+            addHostStatusMessage(finalVoteMessage, 'eliminated');
+        } else if (gameData.outcome === 'survived') {
+            finalVoteMessage += `${gameData.survivorName || '플레이어'}가 생존했습니다.`;
+            addHostStatusMessage(finalVoteMessage, 'survived');
+        } else {
+            finalVoteMessage += '결과를 확인 중입니다.';
+            addHostStatusMessage(finalVoteMessage, 'info');
+        }
+
+        // 최후진술 투표 완료 후 호스트에게 다음 라운드 진행 버튼 표시
+        addHostStatusMessage('라운드가 완료되었습니다.', 'success');
+        setHostActionButton('➡️ 다음 라운드 진행', handleProceedNextRound);
+
+        // 채팅창에 시스템 메시지로 추가
+        addSystemMessage(finalVoteMessage, 'vote-result');
+
+        return; // 최후진술 투표 결과는 여기서 끝
+    }
+
+    // 일반 투표 결과 처리
     let resultMessage = '🗳️ 투표 결과: ';
-    
+
     if (gameData.voteResults && gameData.voteResults.length > 0) {
         // 투표 결과를 득표수 순으로 정렬
         const sortedResults = gameData.voteResults.sort((a, b) => b.voteCount - a.voteCount);
-        
-        const resultDetails = sortedResults.map(result => 
+
+        const resultDetails = sortedResults.map(result =>
             `${result.targetName}: ${result.voteCount}표`
         ).join(', ');
-        
+
         resultMessage += resultDetails;
-        
+
         // 호스트 패널에 투표 결과 추가
         addHostStatusMessage(resultMessage, 'vote-result');
-        
+
         if (gameData.accusedName && gameData.accusedId) {
             addHostStatusMessage(`👉 ${gameData.accusedName}님이 최다 득표로 지목되었습니다.`, 'warning');
             addHostStatusMessage('최후진술을 기다리고 있습니다.', 'info');
@@ -1163,7 +1197,7 @@ function displayVoteResultInHostPanel(gameData) {
     } else {
         addHostStatusMessage('투표 결과가 없습니다.', 'warning');
     }
-    
+
     // 채팅창에 시스템 메시지로 추가
     addSystemMessage(resultMessage, 'vote-result');
 }
