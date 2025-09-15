@@ -336,12 +336,6 @@ function handleVoteResult(data) {
         hideModal('final-defense-modal');
         hideAllModals();
 
-        // 게임 화면도 정리 (최후진술 관련 UI 숨기기)
-        const finalDefensePhase = document.getElementById('final-defense-phase');
-        if (finalDefensePhase) {
-            finalDefensePhase.classList.add('hidden');
-        }
-
         const finalVotingPhase = document.getElementById('final-voting-phase');
         if (finalVotingPhase) {
             finalVotingPhase.classList.add('hidden');
@@ -384,9 +378,7 @@ function handleVoteResult(data) {
                 console.log('지목된 플레이어가 본인임 - 최후진술 모달 표시');
                 showFinalDefenseModal();
             }
-            // 최후진술 단계 화면으로 전환
-            showFinalDefensePhase(accusedPlayer);
-        }, 3000);
+        }, 1000);
     } else if (isFinalVote) {
         console.log('생존/사망 투표 결과 - 최후진술 팝업 실행 안함');
     } else if (AppState.finalDefenseCompleted) {
@@ -668,18 +660,22 @@ async function handleStartVoting() {
         showNotification('호스트만 투표를 시작할 수 있습니다.');
         return;
     }
-    
+
     try {
+        // 호스트 컨트롤 영역 초기화
+        clearHostActionButtons();
+        clearHostStatusMessages();
+
         const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/actions/start-voting?hostId=${AppState.playerInfo.id}`, {
             method: 'POST'
         });
-        
+
         if (!response.ok) {
             throw new Error('투표 시작에 실패했습니다.');
         }
-        
+
         // 시스템 메시지는 WebSocket 응답에서 처리됨
-        
+
     } catch (error) {
         console.error('투표 시작 오류:', error);
         showNotification(error.message);

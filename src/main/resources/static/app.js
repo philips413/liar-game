@@ -77,11 +77,6 @@ function bindGameEventListeners() {
     const submitDescBtn = document.getElementById('submit-description-btn');
     submitDescBtn.addEventListener('click', handleSubmitDescription);
 
-
-    // 최후진술 제출 - 이벤트 리스너는 ui.js의 showFinalDefensePhase에서 관리
-    const submitFinalDefenseBtn = document.getElementById('submit-final-defense-btn');
-    submitFinalDefenseBtn.addEventListener('click', handleSubmitFinalDefense);
-
     // 생존/사망 투표 시작 (호스트)
     document.getElementById('start-final-voting-btn').addEventListener('click', handleStartFinalVoting);
 

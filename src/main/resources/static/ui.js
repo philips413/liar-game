@@ -327,10 +327,6 @@ function updateGamePhaseDisplay(data) {
             showVotingPhase(data.players);
             phaseInfo.textContent = '투표 진행';
             break;
-        case 'FINAL_DEFENSE':
-            showFinalDefensePhase(data.accusedPlayer);
-            phaseInfo.textContent = '최후진술';
-            break;
         case 'FINAL_DEFENSE_COMPLETE':
             showFinalDefenseCompletePhase(data);
             phaseInfo.textContent = '최후진술 완료';
@@ -578,117 +574,7 @@ function displayVoteResult(data) {
     showModal('vote-result-modal');
 }
 
-// 최후진술 단계 표시
-function showFinalDefensePhase(accusedPlayer) {
-    // 호스트가 아니고 지목된 플레이어도 아닌 경우 화면 변경 없음
-    if (!AppState.playerInfo.isHost && accusedPlayer && accusedPlayer.playerId !== AppState.playerInfo.id) {
-        return;
-    }
-    
-    const finalDefensePhase = document.getElementById('final-defense-phase');
-    finalDefensePhase.classList.remove('hidden');
-    
-    const accusedPlayerName = document.getElementById('accused-player-name');
-    const finalDefenseForm = document.getElementById('final-defense-form');
-    const finalDefenseWaiting = document.getElementById('final-defense-waiting');
-    
-    if (accusedPlayer) {
-        accusedPlayerName.textContent = accusedPlayer.nickname;
-        
-        // 지목된 플레이어가 본인인지 확인
-        if (accusedPlayer.playerId === AppState.playerInfo.id) {
 
-            finalDefenseForm.classList.remove('hidden');
-            finalDefenseWaiting.classList.add('hidden');
-            
-            // 입력 필드 완전 초기화
-            const finalInput = document.getElementById('final-defense-input');
-            const submitBtn = document.getElementById('submit-final-defense-btn');
-            
-            console.log('최후진술 입력 초기화 - 이전 상태:', {
-                inputValue: finalInput.value,
-                inputDisabled: finalInput.disabled,
-                buttonDisabled: submitBtn.disabled
-            });
-            
-            finalInput.value = '';
-            finalInput.disabled = false;
-            submitBtn.disabled = true;
-            
-            document.getElementById('final-char-count').textContent = '0';
-            
-            // 이벤트 리스너 바인딩 확인
-            if (!finalInput.hasAttribute('data-final-listener-bound')) {
-                finalInput.addEventListener('input', handleFinalDefenseInput);
-                finalInput.setAttribute('data-final-listener-bound', 'true');
-            }
-            
-            console.log('최후진술 입력 초기화 완료 - 현재 상태:', {
-                inputValue: finalInput.value,
-                inputDisabled: finalInput.disabled,
-                buttonDisabled: submitBtn.disabled
-            });
-        } else {
-            finalDefenseForm.classList.add('hidden');
-            finalDefenseWaiting.classList.remove('hidden');
-        }
-    }
-}
-
-// 최후진술 결과 모달 표시 (모든 플레이어에게)
-function showFinalDefenseResultModal(accusedPlayer, finalDefenseText) {
-    console.log('최후진술 결과 모달 표시:', accusedPlayer.nickname, finalDefenseText);
-    
-    // 기존 모달들 모두 닫기
-    hideAllModals();
-    
-    const modalHTML = `
-        <div id="final-defense-result-modal" class="modal-overlay" style="display: flex;">
-            <div class="modal-content" style="text-align: center; padding: 30px; max-width: 500px;">
-                <div style="font-size: 24px; margin-bottom: 20px;">⚖️</div>
-                <h3 style="color: #e74c3c; margin-bottom: 20px;">최후진술</h3>
-                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 15px; color: #495057;">
-                        🎯 ${accusedPlayer.nickname}님의 최후진술
-                    </h4>
-                    <div style="background-color: white; padding: 15px; border-radius: 6px; border-left: 4px solid #e74c3c;">
-                        <p style="font-size: 16px; line-height: 1.5; margin: 0; text-align: left;">
-                            "${finalDefenseText}"
-                        </p>
-                    </div>
-                </div>
-                <div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <p style="font-size: 14px; color: #1976d2; margin: 0;">
-                        호스트가 생존/사망 투표를 시작할 때까지 기다려주세요
-                    </p>
-                </div>
-                <button onclick="hideFinalDefenseResultModal()" 
-                        class="modal-btn primary-btn" 
-                        style="width: 100%; padding: 12px;">
-                    확인
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // 3초 후 자동 닫기 (사용자가 직접 닫지 않은 경우)
-    setTimeout(() => {
-        const modal = document.getElementById('final-defense-result-modal');
-        if (modal) {
-            hideFinalDefenseResultModal();
-        }
-    }, 5000);
-}
-
-// 최후진술 결과 모달 닫기
-function hideFinalDefenseResultModal() {
-    const modal = document.getElementById('final-defense-result-modal');
-    if (modal) {
-        modal.remove();
-    }
-}
 
 // 최후진술 완료 단계 표시
 function showFinalDefenseCompletePhase(data) {

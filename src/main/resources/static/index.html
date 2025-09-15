@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#667eea">
     <title>라이어 게임</title>
-    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/style.css?v=3">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 </head>
@@ -163,19 +163,6 @@
                 <div id="voting-phase" class="game-phase hidden">
                     <h3>라이어를 찾아 투표하세요</h3>
                     <div id="voting-players" class="voting-grid"></div>
-                </div>
-
-                <!-- 최후진술 단계 -->
-                <div id="final-defense-phase" class="game-phase hidden">
-                    <h3><span id="accused-player-name"></span>님의 최후진술</h3>
-                    <div id="final-defense-form" class="hidden">
-                        <div class="form-group">
-                            <textarea id="final-defense-input" placeholder="최후진술을 작성해주세요..." maxlength="300"></textarea>
-                            <div class="char-count"><span id="final-char-count">0</span>/300</div>
-                        </div>
-                        <button id="submit-final-defense-btn" class="btn btn-primary">최후진술 완료</button>
-                    </div>
-                    <div id="final-defense-waiting" class="waiting-message">최후진술을 기다리는 중...</div>
                 </div>
 
                 <!-- 최후진술 완료 -->
