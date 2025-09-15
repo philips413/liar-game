@@ -754,7 +754,9 @@ function showFinalVotingModal(accusedPlayer) {
 // 생존/사망 투표 모달 닫기
 function closeFinalVotingModal() {
     const finalVotingModal = document.getElementById('final-voting-modal');
-    finalVotingModal.classList.add('hidden');
+    if (finalVotingModal) {
+        finalVotingModal.classList.add('hidden');
+    }
 }
 
 // 지목된 플레이어용 결과 대기 모달 표시
