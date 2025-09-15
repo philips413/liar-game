@@ -1885,13 +1885,7 @@ textarea {
 
 /* 호스트 패널 모바일 최적화 */
 @media (max-width: 768px) {
-    .host-control-panel {
-        margin-bottom: 9px;
-        margin-right: 9px;
-        margin-left: 9px;
-        border-radius: 15px;
-    }
-    
+
     .host-panel-header {
         padding: 10px 12px;
     }

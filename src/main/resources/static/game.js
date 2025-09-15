@@ -666,6 +666,9 @@ async function handleStartVoting() {
         clearHostActionButtons();
         clearHostStatusMessages();
 
+        // 단어 설명 입력창과 버튼 비활성화
+        disableDescriptionInput();
+
         const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/actions/start-voting?hostId=${AppState.playerInfo.id}`, {
             method: 'POST'
         });
@@ -1246,6 +1249,9 @@ function handleNextRoundStart(data) {
     console.log('다음 라운드 시작 - 결과 대기 모달 닫기');
     closeWaitingResultModal();
 
+    // 단어 설명 입력창과 버튼 다시 활성화
+    enableDescriptionInput();
+
     const nextRound = gameData.currentRound || AppState.roomInfo.currentRound;
     addSystemMessage(`다음 라운드(${nextRound}라운드)가 시작됩니다!`, 'round-end');
 }
@@ -1348,10 +1354,43 @@ function handleDescriptionUpdate(data) {
     const playerId = messageData.playerId;
     const nickname = messageData.nickname;
     const description = messageData.description;
-    
+
     // 내가 제출한 설명이 아닌 경우에만 채팅창에 추가
     if (playerId && playerId !== AppState.playerInfo.id && nickname && description) {
         addChatMessage(nickname, description, false);
+    }
+}
+
+// 단어 설명 입력창과 버튼 비활성화
+function disableDescriptionInput() {
+    const descriptionInput = document.getElementById('description-input');
+    const submitDescBtn = document.getElementById('submit-description-btn');
+
+    if (descriptionInput) {
+        descriptionInput.disabled = true;
+        descriptionInput.placeholder = '투표가 시작되어 더 이상 설명을 작성할 수 없습니다.';
+    }
+
+    if (submitDescBtn) {
+        submitDescBtn.disabled = true;
+        submitDescBtn.textContent = '투표 진행 중';
+    }
+}
+
+// 단어 설명 입력창과 버튼 활성화 (다음 라운드 시 필요)
+function enableDescriptionInput() {
+    const descriptionInput = document.getElementById('description-input');
+    const submitDescBtn = document.getElementById('submit-description-btn');
+
+    if (descriptionInput) {
+        descriptionInput.disabled = false;
+        descriptionInput.placeholder = '받은 단어에 대해 설명해주세요...';
+        descriptionInput.value = ''; // 입력 내용 초기화
+    }
+
+    if (submitDescBtn) {
+        submitDescBtn.disabled = false;
+        submitDescBtn.textContent = '단어 설명';
     }
 }
 
