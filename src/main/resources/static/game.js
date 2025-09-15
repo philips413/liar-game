@@ -321,10 +321,16 @@ function handleVoteResult(data) {
     console.log('원본 데이터:', data);
     console.log('처리할 데이터:', gameData);
     console.log('현재 플레이어 정보:', AppState.playerInfo);
-    
+
+    // 최후진술 투표 결과인 경우 대기 모달 닫기
+    if (gameData.isFinalVote || gameData.eliminatedId || gameData.outcome === 'eliminated' || gameData.outcome === 'survived') {
+        console.log('최후진술 투표 결과 - 대기 모달 닫기');
+        closeWaitingResultModal();
+    }
+
     // 호스트 패널에 투표 결과 표시
     displayVoteResultInHostPanel(gameData);
-    
+
     // 모달도 표시 (기존 기능 유지)
     // displayVoteResult(gameData);
 
@@ -399,7 +405,10 @@ function handleFinalVotingStart(data) {
 function handleGameEnd(data) {
     const gameData = data.data || data;
     console.log('게임 종료:', gameData);
-    
+
+    // 모든 대기 모달 닫기
+    closeWaitingResultModal();
+
     // 게임 종료 화면을 먼저 보여줌
     showGameEndPhase(gameData);
     

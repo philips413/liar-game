@@ -283,8 +283,17 @@ function updateGamePhaseDisplay(data) {
                 break;
             case 'FINAL_VOTING':
                 phaseInfo.textContent = '생존/사망 투표';
+                console.log('=== FINAL_VOTING 케이스 (비호스트) ===');
+                console.log('data:', data);
+                console.log('data.accusedPlayer:', data.accusedPlayer);
+                console.log('data.data:', data.data);
+
+                // accusedPlayer 데이터 찾기
+                let accusedPlayer = data.accusedPlayer || (data.data && data.data.accusedPlayer);
+                console.log('최종 accusedPlayer:', accusedPlayer);
+
                 // 호스트가 아닌 플레이어도 재투표 화면 표시
-                showFinalVotingPhase(data.accusedPlayer);
+                showFinalVotingPhase(accusedPlayer);
                 break;
             case 'ROUND_END':
                 phaseInfo.textContent = '라운드 종료';
@@ -327,7 +336,16 @@ function updateGamePhaseDisplay(data) {
             phaseInfo.textContent = '최후진술 완료';
             break;
         case 'FINAL_VOTING':
-            showFinalVotingPhase(data.accusedPlayer);
+            console.log('=== FINAL_VOTING 케이스 (호스트) ===');
+            console.log('data:', data);
+            console.log('data.accusedPlayer:', data.accusedPlayer);
+            console.log('data.data:', data.data);
+
+            // accusedPlayer 데이터 찾기
+            let accusedPlayerHost = data.accusedPlayer || (data.data && data.data.accusedPlayer);
+            console.log('최종 accusedPlayer (호스트):', accusedPlayerHost);
+
+            showFinalVotingPhase(accusedPlayerHost);
             phaseInfo.textContent = '생존/사망 투표';
             break;
         case 'ROUND_END':
@@ -683,16 +701,24 @@ function showFinalDefenseCompletePhase(data) {
 
 // 생존/사망 투표 단계 표시 (모달 방식)
 function showFinalVotingPhase(accusedPlayer) {
-    // 지목된 플레이어는 투표에 참여하지 않음 - 아무것도 표시하지 않음
-    if (accusedPlayer && accusedPlayer.playerId === AppState.playerInfo.id) {
-        // 지목된 플레이어에게는 대기 메시지만 표시
-        const phaseInfo = document.getElementById('phase-info');
-        if (phaseInfo) {
-            phaseInfo.textContent = '다른 플레이어들의 투표를 기다리는 중...';
-        }
+    console.log('=== showFinalVotingPhase 호출 ===');
+    console.log('accusedPlayer:', accusedPlayer);
+    console.log('현재 플레이어 정보:', AppState.playerInfo);
+
+    if (accusedPlayer) {
+        console.log('accusedPlayer.playerId:', accusedPlayer.playerId, '(타입:', typeof accusedPlayer.playerId, ')');
+    }
+    console.log('AppState.playerInfo.id:', AppState.playerInfo.id, '(타입:', typeof AppState.playerInfo.id, ')');
+
+    // 지목된 플레이어는 투표에 참여하지 않음 - 결과 대기 모달 표시
+    if (accusedPlayer && (accusedPlayer.playerId == AppState.playerInfo.id || String(accusedPlayer.playerId) === String(AppState.playerInfo.id))) {
+        console.log('지목된 플레이어 확인됨 - 결과 대기 모달 표시');
+        // 지목된 플레이어에게는 결과 대기 모달 표시
+        showWaitingResultModal();
         return;
     }
 
+    console.log('일반 플레이어 - 투표 모달 표시');
     // 모든 게임 단계 숨기기 (채팅창만 표시)
     hideAllGamePhases();
 
@@ -729,6 +755,44 @@ function showFinalVotingModal(accusedPlayer) {
 function closeFinalVotingModal() {
     const finalVotingModal = document.getElementById('final-voting-modal');
     finalVotingModal.classList.add('hidden');
+}
+
+// 지목된 플레이어용 결과 대기 모달 표시
+function showWaitingResultModal() {
+    console.log('=== showWaitingResultModal 시작 ===');
+
+    // 모든 게임 단계 숨기기 (채팅창만 표시)
+    hideAllGamePhases();
+
+    // 기존 모달들 닫기 - 하지만 remove는 하지 않고 hidden만 처리
+    const allModals = document.querySelectorAll('.modal-overlay');
+    allModals.forEach(modal => {
+        if (modal.id !== 'waiting-result-modal') {
+            modal.classList.add('hidden');
+        }
+    });
+
+    const waitingModal = document.getElementById('waiting-result-modal');
+    console.log('waiting-result-modal 요소:', waitingModal);
+
+    if (waitingModal) {
+        waitingModal.classList.remove('hidden');
+        console.log('결과 대기 모달 표시 완료');
+    } else {
+        console.error('waiting-result-modal 요소를 찾을 수 없습니다!');
+    }
+}
+
+// 결과 대기 모달 닫기
+function closeWaitingResultModal() {
+    console.log('=== closeWaitingResultModal 호출 ===');
+    const waitingModal = document.getElementById('waiting-result-modal');
+    if (waitingModal) {
+        waitingModal.classList.add('hidden');
+        console.log('결과 대기 모달 닫기 완료');
+    } else {
+        console.warn('waiting-result-modal 요소를 찾을 수 없습니다');
+    }
 }
 
 // 게임 종료 단계 표시
