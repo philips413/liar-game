@@ -1206,7 +1206,11 @@ function displayVoteResultInHostPanel(gameData) {
 function handleNextRoundStart(data) {
     const gameData = data.data || data;
     console.log('다음 라운드 시작 웹소켓 메시지:', gameData);
-    
+
+    // 라운드 시작 시 대기 모달 닫기 (지목된 플레이어의 "결과 대기중" 모달)
+    console.log('다음 라운드 시작 - 결과 대기 모달 닫기');
+    closeWaitingResultModal();
+
     const nextRound = gameData.currentRound || AppState.roomInfo.currentRound;
     addSystemMessage(`다음 라운드(${nextRound}라운드)가 시작됩니다!`, 'round-end');
 }

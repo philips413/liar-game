@@ -798,6 +798,10 @@ function closeWaitingResultModal() {
 // 게임 종료 단계 표시
 // 라운드 종료 단계 표시
 function showRoundEndPhase(data) {
+    // 라운드 종료 시 모든 플레이어의 대기 모달 닫기 (지목된 플레이어의 "결과 대기중" 모달 포함)
+    console.log('라운드 종료 - 결과 대기 모달 닫기');
+    closeWaitingResultModal();
+
     // 호스트가 아닌 플레이어는 화면 변경 없음
     if (!AppState.playerInfo.isHost) {
         return;
