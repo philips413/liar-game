@@ -185,7 +185,11 @@ function handleRoomStateUpdate(data) {
 // 게임 시작 처리
 function handleGameStarted(data) {
     console.log('게임 시작:', data);
-    
+
+    // 새 게임/라운드 시작 시 최후진술 완료 플래그 초기화
+    AppState.finalDefenseCompleted = false;
+    console.log('게임 시작 - 최후진술 완료 플래그 초기화');
+
     // 새로운 메시지 구조에서 데이터 추출
     const gameData = data.data || data;
     const gameState = gameData.gameState;
@@ -322,10 +326,34 @@ function handleVoteResult(data) {
     console.log('처리할 데이터:', gameData);
     console.log('현재 플레이어 정보:', AppState.playerInfo);
 
-    // 최후진술 투표 결과인 경우 대기 모달 닫기
+    // 최후진술 투표 결과인 경우 모든 팝업 닫기 및 라운드 정리
     if (gameData.isFinalVote || gameData.eliminatedId || gameData.outcome === 'eliminated' || gameData.outcome === 'survived') {
-        console.log('최후진술 투표 결과 - 대기 모달 닫기');
+        console.log('최후진술 투표 결과 - 모든 팝업 닫기 및 라운드 정리');
+
+        // 모든 관련 모달/팝업 닫기
         closeWaitingResultModal();
+        closeFinalVotingModal();
+        hideModal('final-defense-modal');
+        hideAllModals();
+
+        // 게임 화면도 정리 (최후진술 관련 UI 숨기기)
+        const finalDefensePhase = document.getElementById('final-defense-phase');
+        if (finalDefensePhase) {
+            finalDefensePhase.classList.add('hidden');
+        }
+
+        const finalVotingPhase = document.getElementById('final-voting-phase');
+        if (finalVotingPhase) {
+            finalVotingPhase.classList.add('hidden');
+        }
+
+        // 모든 플레이어에게 라운드 완료 메시지 표시
+        const phaseInfo = document.getElementById('phase-info');
+        if (phaseInfo) {
+            phaseInfo.textContent = '라운드 완료 - 호스트가 다음 라운드를 진행할 때까지 기다려주세요.';
+        }
+
+        console.log('라운드 완료 - 모든 팝업 및 관련 UI 제거됨');
     }
 
     // 호스트 패널에 투표 결과 표시
@@ -339,7 +367,8 @@ function handleVoteResult(data) {
     // 최후진술 투표 결과가 아닌 경우에만 지목자가 있으면 최후진술 팝업 자동 표시
     const isFinalVote = gameData.isFinalVote || gameData.eliminatedId || gameData.outcome === 'eliminated' || gameData.outcome === 'survived';
 
-    if (!isFinalVote && gameData.accusedName && gameData.accusedId) {
+    // 추가 안전 장치: 최후진술이 이미 완료된 경우에도 팝업 차단
+    if (!isFinalVote && !AppState.finalDefenseCompleted && gameData.accusedName && gameData.accusedId) {
         const accusedPlayer = {
             playerId: gameData.accusedId,
             nickname: gameData.accusedName
@@ -360,6 +389,8 @@ function handleVoteResult(data) {
         }, 3000);
     } else if (isFinalVote) {
         console.log('생존/사망 투표 결과 - 최후진술 팝업 실행 안함');
+    } else if (AppState.finalDefenseCompleted) {
+        console.log('최후진술 이미 완료됨 - 최후진술 팝업 실행 안함');
     } else {
         console.log('지목자 없음 또는 데이터 누락:', {
             accusedName: gameData.accusedName,
@@ -372,7 +403,11 @@ function handleVoteResult(data) {
 function handleFinalDefenseComplete(data) {
     const gameData = data.data || data;
     console.log('최후진술 완료:', gameData);
-    
+
+    // 최후진술이 완료되었음을 표시 (생존/사망 투표 후 중복 팝업 방지용)
+    AppState.finalDefenseCompleted = true;
+    console.log('최후진술 완료 플래그 설정:', AppState.finalDefenseCompleted);
+
     // 호스트에게 최후진술 완료 알림
     if (AppState.playerInfo.isHost && gameData.accusedPlayer) {
         addHostStatusMessage(`${gameData.accusedPlayer.nickname}님의 최후진술이 완료되었습니다.`, 'info');
@@ -1206,6 +1241,10 @@ function displayVoteResultInHostPanel(gameData) {
 function handleNextRoundStart(data) {
     const gameData = data.data || data;
     console.log('다음 라운드 시작 웹소켓 메시지:', gameData);
+
+    // 새 라운드 시작 시 최후진술 완료 플래그 초기화
+    AppState.finalDefenseCompleted = false;
+    console.log('다음 라운드 시작 - 최후진술 완료 플래그 초기화');
 
     // 라운드 시작 시 대기 모달 닫기 (지목된 플레이어의 "결과 대기중" 모달)
     console.log('다음 라운드 시작 - 결과 대기 모달 닫기');

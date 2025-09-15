@@ -21,7 +21,8 @@ const AppState = {
     stompClient: null,
     isConnected: false,
     countdownTimer: null,
-    currentModal: null
+    currentModal: null,
+    finalDefenseCompleted: false, // 최후진술 완료 여부 추적
 };
 
 // 초기화
