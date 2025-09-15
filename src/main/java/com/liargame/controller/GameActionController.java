@@ -51,7 +51,7 @@ public class GameActionController extends BaseController {
     ) {
         return handleVoidRequest(
             () -> gamePlayService.submitFinalVote(roomCode, Long.valueOf(playerId), decision),
-            "재투표가 제출되었습니다"
+            "생존/사망 투표가 제출되었습니다"
         );
     }
     

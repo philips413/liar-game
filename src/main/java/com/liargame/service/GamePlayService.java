@@ -717,53 +717,35 @@ public class GamePlayService {
                 .findFirst()
                 .orElse(keyPlayer);
         
-        // 각 플레이어에게 개별적으로 역할에 맞는 메시지 전송
-        for (Player player : allPlayers) {
-            Map<String, Object> gameEndData = new HashMap<>();
-            gameEndData.put("winner", winnerType);
-            gameEndData.put("liarId", liar != null ? liar.getPlayerId() : null);
-            gameEndData.put("liarName", liar != null ? liar.getNickname() : "Unknown");
-            gameEndData.put("totalRounds", room.getCurrentRound());
-            gameEndData.put("maxRounds", room.getRoundLimit());
-            gameEndData.put("players", allPlayers.stream().map(p -> Map.of(
-                "playerId", p.getPlayerId(),
-                "nickname", p.getNickname(),
-                "role", p.getRole().name()
-            )).collect(Collectors.toList()));
-            
-            // 플레이어 역할에 따른 개별 메시지 설정
-            if (player.getRole() == Player.PlayerRole.LIAR) {
-                // 라이어용 메시지
-                if ("LIAR".equals(winnerType)) {
-                    gameEndData.put("reason", "mission_success");
-                    if (room.getCurrentRound() >= room.getRoundLimit()) {
-                        gameEndData.put("message", "🎭 미션에 성공하였습니다!\n끝까지 정체를 숨겼습니다.");
-                    } else {
-                        gameEndData.put("message", "🎭 미션에 성공하였습니다!\n시민이 부족해 승리했습니다.");
-                    }
-                } else {
-                    gameEndData.put("reason", "mission_failed");
-                    gameEndData.put("message", "💀 미션에 실패하였습니다.\n정체가 발각되었습니다.");
-                }
+        // 모든 플레이어에게 동일한 게임 종료 데이터 브로드캐스트
+        Map<String, Object> gameEndData = new HashMap<>();
+        gameEndData.put("winner", winnerType);
+        gameEndData.put("liarId", liar != null ? liar.getPlayerId() : null);
+        gameEndData.put("liarName", liar != null ? liar.getNickname() : "Unknown");
+        gameEndData.put("totalRounds", room.getCurrentRound());
+        gameEndData.put("maxRounds", room.getRoundLimit());
+        gameEndData.put("players", allPlayers.stream().map(p -> Map.of(
+            "playerId", p.getPlayerId(),
+            "nickname", p.getNickname(),
+            "role", p.getRole().name()
+        )).collect(Collectors.toList()));
+
+        // 승리 결과에 따른 공통 메시지 설정
+        if ("LIAR".equals(winnerType)) {
+            gameEndData.put("reason", "mission_success");
+            if (room.getCurrentRound() >= room.getRoundLimit()) {
+                gameEndData.put("message", String.format("🎭 라이어 %s님이 승리했습니다!\n끝까지 정체를 숨기는데 성공했습니다.", liar != null ? liar.getNickname() : ""));
             } else {
-                // 시민용 메시지
-                if ("CITIZENS".equals(winnerType)) {
-                    gameEndData.put("reason", "citizens_victory");
-                    gameEndData.put("message", String.format("🎉 시민이 승리하였습니다!\n라이어 %s님을 찾아냈습니다.", liar != null ? liar.getNickname() : ""));
-                } else {
-                    gameEndData.put("reason", "citizens_defeat");
-                    if (room.getCurrentRound() >= room.getRoundLimit()) {
-                        gameEndData.put("message", String.format("😞 시민이 실패하였습니다.\n라이어 %s님이 끝까지 숨었습니다.", liar != null ? liar.getNickname() : ""));
-                    } else {
-                        gameEndData.put("message", String.format("😞 시민이 실패하였습니다.\n라이어 %s님이 승리했습니다.", liar != null ? liar.getNickname() : ""));
-                    }
-                }
+                gameEndData.put("message", String.format("🎭 라이어 %s님이 승리했습니다!\n시민 수가 부족해 승리했습니다.", liar != null ? liar.getNickname() : ""));
             }
-            
-            // 개별 플레이어에게 메시지 전송
-            GameMessage personalMessage = GameMessage.of("GAME_END", room.getCode(), gameEndData);
-            messagingTemplate.convertAndSendToUser(player.getPlayerId().toString(), "/queue/personal", personalMessage);
+        } else {
+            gameEndData.put("reason", "citizens_victory");
+            gameEndData.put("message", String.format("🎉 시민팀이 승리했습니다!\n라이어 %s님을 성공적으로 찾아냈습니다.", liar != null ? liar.getNickname() : ""));
         }
+
+        // 모든 플레이어에게 브로드캐스트
+        GameMessage broadcastMessage = GameMessage.of("GAME_END", room.getCode(), gameEndData);
+        messagingTemplate.convertAndSend("/topic/rooms/" + room.getCode(), broadcastMessage);
         
         logAudit(room.getRoomId(), null, "GAME_ENDED", 
                 String.format("winner: %s, liar: %s", winnerType, liar != null ? liar.getNickname() : "Unknown"));

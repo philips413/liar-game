@@ -2217,3 +2217,225 @@ textarea {
         font-size: 0.9rem;
     }
 }
+
+/* 게임 승리자 팝업 모달 */
+#game-winner-modal {
+    z-index: 10000;
+}
+
+#game-winner-modal .modal-content.winner-modal {
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    animation: winnerModalAppear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes winnerModalAppear {
+    0% {
+        opacity: 0;
+        transform: scale(0.3) rotate(-10deg);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+.winner-header {
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 25px;
+    text-align: center;
+    border-radius: 20px 20px 0 0;
+}
+
+.winner-header h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.winner-body {
+    padding: 30px 25px;
+}
+
+.winner-content {
+    text-align: center;
+}
+
+.winner-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-30px);
+    }
+    60% {
+        transform: translateY(-15px);
+    }
+}
+
+.winner-message {
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.winner-details {
+    font-size: 1.1rem;
+    margin-bottom: 25px;
+    opacity: 0.95;
+    line-height: 1.5;
+}
+
+.players-roles-reveal {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.players-roles-reveal h4 {
+    margin: 0 0 15px 0;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.roles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.role-reveal-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    font-size: 1rem;
+}
+
+.role-reveal-name {
+    font-weight: 500;
+}
+
+.role-reveal-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.role-reveal-badge.liar {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    box-shadow: 0 2px 8px rgba(238, 90, 36, 0.3);
+}
+
+.role-reveal-badge.citizen {
+    background: linear-gradient(135deg, #4dabf7, #339af0);
+    color: white;
+    box-shadow: 0 2px 8px rgba(51, 154, 240, 0.3);
+}
+
+.winner-footer {
+    background: rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 20px 25px;
+    text-align: center;
+    border-radius: 0 0 20px 20px;
+}
+
+.winner-footer .modal-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.winner-footer .modal-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* 승리자별 테마 색상 */
+.winner-modal.liar-victory {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+}
+
+.winner-modal.citizen-victory {
+    background: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
+}
+
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+    #game-winner-modal .modal-content.winner-modal {
+        width: 95%;
+        margin: 20px;
+    }
+
+    .winner-header {
+        padding: 20px;
+    }
+
+    .winner-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .winner-body {
+        padding: 25px 20px;
+    }
+
+    .winner-icon {
+        font-size: 3rem;
+    }
+
+    .winner-message {
+        font-size: 1.2rem;
+    }
+
+    .winner-details {
+        font-size: 1rem;
+    }
+
+    .players-roles-reveal {
+        padding: 15px;
+    }
+
+    .role-reveal-item {
+        padding: 8px 12px;
+        font-size: 0.95rem;
+    }
+
+    .winner-footer {
+        padding: 15px 20px;
+    }
+
+    .winner-footer .modal-btn {
+        padding: 10px 25px;
+        font-size: 1rem;
+    }
+}

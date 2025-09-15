@@ -359,10 +359,41 @@
                 </div>
             </div>
         </div>
+
+        <!-- 게임 종료 승리자 팝업 모달 -->
+        <div id="game-winner-modal" class="modal-overlay hidden">
+            <div class="modal-content winner-modal">
+                <div class="modal-header winner-header">
+                    <h2 id="winner-title">🎉 게임 종료</h2>
+                </div>
+                <div class="modal-body winner-body">
+                    <div class="winner-content">
+                        <div class="winner-icon" id="winner-icon">
+                            🏆
+                        </div>
+                        <div class="winner-message" id="winner-message">
+                            게임이 종료되었습니다!
+                        </div>
+                        <div class="winner-details" id="winner-details">
+                        </div>
+                        <div class="players-roles-reveal" id="players-roles-reveal">
+                            <h4>🎭 역할 공개</h4>
+                            <div class="roles-list" id="roles-list">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer winner-footer">
+                    <button id="winner-close-btn" class="modal-btn primary-btn" onclick="closeWinnerModal()">
+                        확인
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script src="/game.js?v=2"></script>
-    <script src="/ui.js?v=2"></script>
-    <script src="/app.js?v=2"></script>
+    <script src="/game.js?v=3"></script>
+    <script src="/ui.js?v=3"></script>
+    <script src="/app.js?v=3"></script>
 </body>
 </html>

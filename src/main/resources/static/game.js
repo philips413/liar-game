@@ -374,7 +374,7 @@ function handleFinalVoteResult(data) {
     if (gameData.isFinalVote || gameData.eliminatedId || gameData.outcome === 'eliminated' || gameData.outcome === 'survived') {
         console.log('최후진술 투표 결과 - 모든 팝업 닫기 및 라운드 정리');
 
-        // 모든 관련 모달/팝업 닫기
+        // 모든 관련 모달/팝업 닫기 (지목된 플레이어의 결과 대기 팝업 포함)
         closeWaitingResultModal();
         closeFinalVotingModal();
         hideModal('final-defense-modal');
@@ -383,6 +383,14 @@ function handleFinalVoteResult(data) {
         const finalVotingPhase = document.getElementById('final-voting-phase');
         if (finalVotingPhase) {
             finalVotingPhase.classList.add('hidden');
+        }
+
+        // 지목된 플레이어의 결과 대기 팝업을 확실히 제거하기 위한 추가 호출
+        if (typeof closeWaitingResultModal === 'function') {
+            setTimeout(() => {
+                closeWaitingResultModal();
+                console.log('지목된 플레이어의 결과 대기 팝업 강제 제거 완료');
+            }, 100);
         }
 
         // 모든 플레이어에게 라운드 완료 메시지 표시
@@ -447,15 +455,10 @@ function handleGameEnd(data) {
     // 모든 대기 모달 닫기
     closeWaitingResultModal();
 
-    // 게임 종료 화면을 먼저 보여줌
-    showGameEndPhase(gameData);
-    
-    // 5초 후 자동으로 대기실로 이동
-    setTimeout(() => {
-        if (confirm('게임이 종료되었습니다. 대기실로 돌아가시겠습니까?')) {
-            returnToWaitingRoom();
-        }
-    }, 3000);
+    // 승리자 팝업 표시 (모든 플레이어에게)
+    showWinnerModal(gameData);
+
+    // 자동 이동은 팝업 닫기 버튼에서 처리하므로 제거
 }
 
 // 게임 중단 처리

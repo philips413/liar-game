@@ -794,6 +794,115 @@ function showGameEndPhase(data) {
     }
 }
 
+// 게임 승리자 팝업 표시
+function showWinnerModal(data) {
+    console.log('=== 승리자 팝업 표시 ===', data);
+
+    // DOM이 완전히 로드될 때까지 대기
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => showWinnerModal(data));
+        return;
+    }
+
+    // 모든 기존 모달 닫기
+    hideAllModals();
+
+    // 짧은 지연을 두고 모달 요소 가져오기 (DOM 업데이트 대기)
+    setTimeout(() => {
+        const modal = document.getElementById('game-winner-modal');
+        if (!modal) {
+            console.error('game-winner-modal 요소를 찾을 수 없습니다!');
+            // 대체 알림 표시
+            alert('게임이 종료되었습니다!\n' + (data.message || '승부 결과를 확인할 수 없습니다.'));
+            return;
+        }
+
+        const modalContent = modal.querySelector('.modal-content.winner-modal');
+        if (!modalContent) {
+            console.error('winner-modal 요소를 찾을 수 없습니다!');
+            return;
+        }
+
+        const title = document.getElementById('winner-title');
+        const icon = document.getElementById('winner-icon');
+        const message = document.getElementById('winner-message');
+        const details = document.getElementById('winner-details');
+        const rolesList = document.getElementById('roles-list');
+
+        // 필수 요소들이 없으면 오류 로그 출력
+        if (!title || !icon || !message || !details || !rolesList) {
+            console.error('승리자 모달의 필수 요소들을 찾을 수 없습니다:', {
+                title: !!title,
+                icon: !!icon,
+                message: !!message,
+                details: !!details,
+                rolesList: !!rolesList
+            });
+            return;
+        }
+
+        // 승리자에 따른 테마 설정
+        if (data.winner === 'LIAR' || data.reason === 'mission_success') {
+            modalContent.classList.remove('citizen-victory');
+            modalContent.classList.add('liar-victory');
+            title.textContent = '🎭 라이어 승리!';
+            icon.textContent = '🎭';
+            message.textContent = '라이어가 승리했습니다!';
+            details.textContent = data.message || '라이어가 마지막까지 정체를 숨기는데 성공했습니다!';
+        } else if (data.winner === 'CITIZENS' || data.reason === 'citizens_victory') {
+            modalContent.classList.remove('liar-victory');
+            modalContent.classList.add('citizen-victory');
+            title.textContent = '🎉 시민 승리!';
+            icon.textContent = '🎉';
+            message.textContent = '시민팀이 승리했습니다!';
+            details.textContent = data.message || '시민들이 라이어를 성공적으로 찾아냈습니다!';
+        } else {
+            // 기본값
+            modalContent.classList.remove('liar-victory', 'citizen-victory');
+            title.textContent = '🏁 게임 종료';
+            icon.textContent = '🏁';
+            message.textContent = '게임이 종료되었습니다!';
+            details.textContent = data.message || '모든 라운드가 완료되었습니다.';
+        }
+
+        // 플레이어 역할 공개
+        if (data.players && Array.isArray(data.players)) {
+            rolesList.innerHTML = data.players.map(player => `
+                <div class="role-reveal-item">
+                    <span class="role-reveal-name">${player.nickname}</span>
+                    <span class="role-reveal-badge ${player.role.toLowerCase()}">
+                        ${player.role === 'LIAR' ? '라이어' : '시민'}
+                    </span>
+                </div>
+            `).join('');
+        } else {
+            rolesList.innerHTML = '<p>역할 정보를 불러올 수 없습니다.</p>';
+        }
+
+        // 모달 표시
+        modal.classList.remove('hidden');
+
+        console.log('승리자 팝업 표시 완료');
+    }, 100);
+}
+
+// 게임 승리자 팝업 닫기
+function closeWinnerModal() {
+    console.log('=== 승리자 팝업 닫기 ===');
+    const modal = document.getElementById('game-winner-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        console.log('승리자 팝업 닫기 완료');
+
+        // 팝업 닫힌 후 대기실로 이동 확인
+        setTimeout(() => {
+            if (confirm('대기실로 돌아가시겠습니까?')) {
+                returnToWaitingRoom();
+            }
+        }, 500);
+    }
+}
+
 // 폼 유효성 검사
 function validateForm(formId) {
     const form = document.getElementById(formId);
