@@ -1924,12 +1924,162 @@ textarea {
         padding-right: max(15px, env(safe-area-inset-right));
         padding-bottom: max(15px, env(safe-area-inset-bottom));
     }
-    
+
     @media (max-width: 768px) {
         .container {
             padding-left: max(10px, env(safe-area-inset-left));
             padding-right: max(10px, env(safe-area-inset-right));
             padding-bottom: max(10px, env(safe-area-inset-bottom));
         }
+    }
+}
+
+/* ===== 생존/사망 투표 모달 스타일 ===== */
+#final-voting-modal {
+    z-index: 1001; /* 다른 모달보다 높은 z-index */
+}
+
+#final-voting-modal .modal-content {
+    max-width: 500px;
+    width: 90%;
+}
+
+#final-voting-modal .modal-header {
+    text-align: center;
+    padding: 25px 25px 15px;
+}
+
+#final-voting-modal .modal-header h3 {
+    color: #e74c3c;
+    margin-bottom: 10px;
+    font-size: 1.4rem;
+}
+
+#final-voting-modal .modal-header p {
+    color: #495057;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.final-vote-description {
+    text-align: center;
+    margin-bottom: 25px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #e74c3c;
+}
+
+.final-vote-description p {
+    margin: 0;
+    color: #495057;
+    font-size: 1rem;
+}
+
+.final-vote-options {
+    display: flex;
+    gap: 15px;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.final-vote-options .vote-btn {
+    flex: 1;
+    padding: 20px 15px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.final-vote-options .vote-btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+}
+
+.final-vote-options .vote-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.final-vote-options .vote-btn.survive-btn {
+    background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+    color: white;
+}
+
+.final-vote-options .vote-btn.survive-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #00a085 0%, #00b7b3 100%);
+}
+
+.final-vote-options .vote-btn.eliminate-btn {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+}
+
+.final-vote-options .vote-btn.eliminate-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+}
+
+.vote-icon {
+    font-size: 2rem;
+}
+
+.vote-text {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.vote-desc {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    text-align: center;
+}
+
+#final-voting-modal .modal-footer {
+    text-align: center;
+    padding: 0 25px 25px;
+}
+
+#final-voting-modal .vote-status {
+    color: #495057;
+    font-weight: 500;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+    .final-vote-options {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .final-vote-options .vote-btn {
+        padding: 18px 15px;
+    }
+
+    .vote-icon {
+        font-size: 1.8rem;
+    }
+
+    .vote-text {
+        font-size: 1.1rem;
+    }
+
+    .vote-desc {
+        font-size: 0.8rem;
+    }
+
+    #final-voting-modal .modal-content {
+        width: 95%;
     }
 }

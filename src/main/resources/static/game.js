@@ -948,6 +948,95 @@ async function handleFinalVote(decision) {
     }
 }
 
+// 모달에서 생존/사망 투표 제출
+async function handleModalFinalVote(decision) {
+    // 중복 투표 방지
+    const modalSurviveBtn = document.getElementById('modal-survive-vote-btn');
+    const modalEliminateBtn = document.getElementById('modal-eliminate-vote-btn');
+
+    if (modalSurviveBtn.disabled && modalEliminateBtn.disabled) {
+        showNotification('이미 투표를 완료했습니다.');
+        return;
+    }
+
+    // 투표 확인
+    const decisionText = decision === 'SURVIVE' ? '생존' : '사망';
+    const voteStatus = document.querySelector('#final-voting-modal .vote-status');
+
+    if (voteStatus) {
+        voteStatus.textContent = `${decisionText} 투표를 제출하시겠습니까?`;
+    }
+
+    if (!confirm(`${decisionText} 투표를 제출하시겠습니까?`)) {
+        if (voteStatus) {
+            voteStatus.textContent = '선택해주세요';
+        }
+        return;
+    }
+
+    try {
+        console.log('모달 최후진술 투표 제출:', { decision, playerId: AppState.playerInfo.id, roomCode: AppState.roomInfo.code });
+
+        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/actions/final-vote?playerId=${AppState.playerInfo.id}&decision=${decision}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        console.log('모달 최후진술 투표 응답:', response.status, response.statusText);
+
+        if (!response.ok) {
+            let errorMessage = '투표 제출에 실패했습니다.';
+
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+            } catch (parseError) {
+                console.warn('응답 파싱 실패, 기본 에러 메시지 사용');
+                if (response.status === 400) {
+                    errorMessage = '잘못된 투표 요청입니다.';
+                } else if (response.status === 404) {
+                    errorMessage = '방을 찾을 수 없습니다.';
+                } else if (response.status === 500) {
+                    errorMessage = '서버 오류가 발생했습니다.';
+                }
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        // 성공한 경우 투표 버튼 비활성화
+        modalSurviveBtn.disabled = true;
+        modalEliminateBtn.disabled = true;
+
+        if (voteStatus) {
+            voteStatus.textContent = `${decisionText} 투표가 완료되었습니다.`;
+        }
+
+        showNotification(`${decisionText} 투표가 완료되었습니다.`);
+
+        // 모달 닫기
+        setTimeout(() => {
+            closeFinalVotingModal();
+        }, 1500);
+
+    } catch (error) {
+        console.error('모달 생존/사망 투표 오류:', error);
+
+        if (voteStatus) {
+            voteStatus.textContent = '선택해주세요';
+        }
+
+        // 네트워크 오류와 서버 오류를 구분하여 처리
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+            showNotification('네트워크 연결을 확인해주세요.');
+        } else {
+            showNotification(error.message || '투표 처리 중 오류가 발생했습니다.');
+        }
+    }
+}
+
 // 대기실로 돌아가기
 function returnToWaitingRoom() {
     console.log('대기실로 돌아가는 중...');

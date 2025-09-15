@@ -681,23 +681,54 @@ function showFinalDefenseCompletePhase(data) {
     // 호스트는 이미 handleFinalDefenseComplete()에서 버튼을 받았음
 }
 
-// 생존/사망 투표 단계 표시
+// 생존/사망 투표 단계 표시 (모달 방식)
 function showFinalVotingPhase(accusedPlayer) {
-    // 지목된 플레이어는 투표에 참여하지 않음
+    // 지목된 플레이어는 투표에 참여하지 않음 - 아무것도 표시하지 않음
     if (accusedPlayer && accusedPlayer.playerId === AppState.playerInfo.id) {
+        // 지목된 플레이어에게는 대기 메시지만 표시
+        const phaseInfo = document.getElementById('phase-info');
+        if (phaseInfo) {
+            phaseInfo.textContent = '다른 플레이어들의 투표를 기다리는 중...';
+        }
         return;
     }
-    
-    const finalVotingPhase = document.getElementById('final-voting-phase');
-    finalVotingPhase.classList.remove('hidden');
-    
+
+    // 모든 게임 단계 숨기기 (채팅창만 표시)
+    hideAllGamePhases();
+
+    // 모달 방식으로 투표 표시
+    showFinalVotingModal(accusedPlayer);
+}
+
+// 생존/사망 투표 모달 표시
+function showFinalVotingModal(accusedPlayer) {
+    const finalVotingModal = document.getElementById('final-voting-modal');
+    const modalAccusedName = document.getElementById('modal-accused-player-name');
+
     if (accusedPlayer) {
-        document.getElementById('final-voting-player-name').textContent = accusedPlayer.nickname;
+        modalAccusedName.textContent = accusedPlayer.nickname;
     }
-    
+
     // 투표 버튼 활성화
-    document.getElementById('survive-vote-btn').disabled = false;
-    document.getElementById('eliminate-vote-btn').disabled = false;
+    const surviveBtn = document.getElementById('modal-survive-vote-btn');
+    const eliminateBtn = document.getElementById('modal-eliminate-vote-btn');
+
+    surviveBtn.disabled = false;
+    eliminateBtn.disabled = false;
+
+    // 투표 상태 초기화
+    const voteStatus = document.querySelector('#final-voting-modal .vote-status');
+    if (voteStatus) {
+        voteStatus.textContent = '선택해주세요';
+    }
+
+    finalVotingModal.classList.remove('hidden');
+}
+
+// 생존/사망 투표 모달 닫기
+function closeFinalVotingModal() {
+    const finalVotingModal = document.getElementById('final-voting-modal');
+    finalVotingModal.classList.add('hidden');
 }
 
 // 게임 종료 단계 표시

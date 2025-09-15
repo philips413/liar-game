@@ -312,6 +312,36 @@
                 </div>
             </div>
         </div>
+
+        <!-- 생존/사망 투표 팝업 -->
+        <div id="final-voting-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>⚖️ 최종 심판</h3>
+                    <p><span id="modal-accused-player-name"></span>님에 대한 최종 투표</p>
+                </div>
+                <div class="modal-body">
+                    <div class="final-vote-description">
+                        <p>최후진술을 들었습니다. 어떻게 결정하시겠습니까?</p>
+                    </div>
+                    <div class="final-vote-options">
+                        <button id="modal-survive-vote-btn" class="vote-btn survive-btn" onclick="handleModalFinalVote('SURVIVE')">
+                            <div class="vote-icon">🛡️</div>
+                            <div class="vote-text">생존</div>
+                            <div class="vote-desc">이 플레이어를 살려둡니다</div>
+                        </button>
+                        <button id="modal-eliminate-vote-btn" class="vote-btn eliminate-btn" onclick="handleModalFinalVote('ELIMINATE')">
+                            <div class="vote-icon">⚔️</div>
+                            <div class="vote-text">사망</div>
+                            <div class="vote-desc">이 플레이어를 처형합니다</div>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="vote-status">선택해주세요</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/game.js?v=2"></script>
