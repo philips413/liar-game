@@ -272,16 +272,21 @@ function handleRoundStateUpdate(data) {
     if (gameData.state === 'DESC') {
         const descInput = document.getElementById('description-input');
         const submitBtn = document.getElementById('submit-description-btn');
-        
+
         if (descInput) {
             descInput.disabled = false;
         }
-        
+
         if (submitBtn) {
             // 추가 설명 허용 시 제출 상태 초기화
             submitBtn.dataset.submitted = 'false';
             submitBtn.disabled = false;
             submitBtn.textContent = '단어 설명';
+        }
+
+        // 메시지가 있으면 채팅창에 표시
+        if (gameData.data.message) {
+            addChatMessage('시스템', gameData.data.message);
         }
     }
 
@@ -321,7 +326,9 @@ function handleVoteResult(data) {
     displayVoteResultInHostPanel(gameData);
     
     // 모달도 표시 (기존 기능 유지)
-    displayVoteResult(gameData);
+    // displayVoteResult(gameData);
+
+    displayVoteResultInChat(gameData);
     
     // 지목자가 있으면 최후진술 팝업 자동 표시
     if (gameData.accusedName && gameData.accusedId) {
@@ -363,9 +370,11 @@ function handleFinalDefenseComplete(data) {
         setHostActionButton('⚖️ 생존/사망 투표 시작', handleStartFinalVoting);
     }
     
-    // 모든 플레이어에게 최후진술 내용을 모달로 표시
+    // 모든 플레이어에게 최후진술 내용을 채팅창에 표시
     if (gameData.finalDefenseText && gameData.accusedPlayer) {
-        showFinalDefenseResultModal(gameData.accusedPlayer, gameData.finalDefenseText);
+        addChatMessage('시스템', `🎯 ${gameData.accusedPlayer.nickname}님의 최후진술이 완료되었습니다.`);
+        addChatMessage(gameData.accusedPlayer.nickname, `${gameData.finalDefenseText}`, 'final-defense');
+        addChatMessage('시스템', '호스트가 생존/사망 투표를 시작할 때까지 기다려주세요.');
     }
     
     showFinalDefenseCompletePhase(gameData);
@@ -653,6 +662,11 @@ async function handleVoteSubmit(targetPlayerId) {
             card.classList.add('disabled');
             card.style.pointerEvents = 'none';
         });
+
+        // 투표 모달 닫기 (UI 함수가 있는 경우)
+        if (typeof closeVotingModal === 'function') {
+            closeVotingModal();
+        }
         
     } catch (error) {
         console.error('투표 제출 오류:', error);
@@ -780,6 +794,72 @@ async function handleSubmitFinalDefense() {
         console.error('최후진술 제출 오류:', error);
         showNotification(error.message);
     }
+}
+
+// 투표 결과를 채팅창에 표시 (모든 플레이어)
+function displayVoteResultInChat(gameData) {
+    console.log('투표 결과를 채팅창에 표시:', gameData);
+
+    // 투표 결과 헤더 메시지
+    addSystemMessage('🗳️ 투표 결과가 발표됩니다!', 'voting');
+
+    // 투표 결과 상세 정보
+    if (gameData.voteResults && gameData.voteResults.length > 0) {
+        // 투표 결과를 득표수 순으로 정렬
+        const sortedResults = gameData.voteResults.sort((a, b) => b.voteCount - a.voteCount);
+
+        sortedResults.forEach((result, index) => {
+            const emoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '📊';
+            addSystemMessage(`${emoji} ${result.targetName}: ${result.voteCount}표`, 'voting');
+        });
+    } else {
+        addSystemMessage('투표 결과가 없습니다.', 'warning');
+    }
+
+    // 지목 결과 메시지
+    if (gameData.accusedName && gameData.accusedId) {
+        addSystemMessage(`👉 ${gameData.accusedName}님이 최다 득표로 지목되었습니다!`, 'voting');
+        addSystemMessage('곧 최후진술이 시작됩니다.', 'final-defense');
+    } else {
+        addSystemMessage('과반수 득표자가 없어 다음 라운드로 진행합니다.', 'round-end');
+    }
+}
+
+// 최후진술을 채팅창에 표시 (모든 플레이어)
+function displayFinalDefenseInChat(accusedPlayer, finalDefenseText) {
+    console.log('최후진술을 채팅창에 표시:', accusedPlayer.nickname, finalDefenseText);
+
+    // 최후진술 시작 알림
+    addSystemMessage(`⚖️ ${accusedPlayer.nickname}님의 최후진술이 시작됩니다`, 'final-defense');
+
+    // 최후진술 내용을 특별한 스타일로 표시
+    const chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        const defenseDiv = document.createElement('div');
+        defenseDiv.className = 'chat-message final-defense-message';
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'final-defense-header';
+        headerDiv.innerHTML = `
+            <div class="defense-icon">🎭</div>
+            <div class="defense-title">${accusedPlayer.nickname}님의 최후진술</div>
+        `;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'final-defense-content';
+        contentDiv.textContent = `"${finalDefenseText}"`;
+
+        defenseDiv.appendChild(headerDiv);
+        defenseDiv.appendChild(contentDiv);
+
+        chatMessages.appendChild(defenseDiv);
+
+        // 스크롤을 최하단으로 이동
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // 생존/사망 투표 안내 메시지
+    addSystemMessage('호스트가 생존/사망 투표를 시작할 때까지 기다려주세요', 'info');
 }
 
 // 생존/사망 투표 시작 (호스트)

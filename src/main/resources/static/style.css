@@ -672,8 +672,26 @@ textarea {
     background: #5a67d8;
     color: white;
     padding: 4px 8px;
-    border-radius: 12px;
+}
+
+/* 투표 모달 스타일 */
+#voting-modal .modal-body {
+    padding: 20px;
+}
+
+#voting-modal .voting-grid {
+    margin-bottom: 0;
+}
+
+.vote-status {
+    text-align: center;
     font-size: 0.9rem;
+    font-weight: 500;
+    color: #4a5568;
+    padding: 10px;
+    background: #f7fafc;
+    border-radius: 8px;
+    margin: 10px 0;
 }
 
 /* 최후진술 */
@@ -1550,6 +1568,32 @@ textarea {
 
 .chat-message .message-text {
     margin: 0;
+}
+
+/* 최후진술 메시지 스타일 */
+.chat-message.final-defense-message {
+    background: linear-gradient(135deg, #fff3cd, #ffeeba);
+    border: 2px solid #f4c430;
+    border-left: 5px solid #e74c3c;
+    margin: 10px 0;
+    box-shadow: 0 3px 10px rgba(231, 76, 60, 0.2);
+}
+
+.chat-message.final-defense-message .sender-name {
+    color: #c82333;
+    font-weight: bold;
+    font-size: 0.95rem;
+}
+
+.chat-message.final-defense-message .message-text {
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 5px;
+    border-left: 3px solid #e74c3c;
+    font-style: italic;
+    font-size: 1rem;
+    line-height: 1.4;
 }
 
 /* 설명 입력 섹션 */

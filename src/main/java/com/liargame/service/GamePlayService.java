@@ -347,7 +347,7 @@ public class GamePlayService {
         
         // 라운드 상태 변경 브로드캐스트 (모든 플레이어의 입력 필드 활성화)
         broadcastRoundStateChange(roomCode, "DESC", Map.of(
-            "message", "호스트가 추가 설명을 허용했습니다",
+            "message", "호스트가 한번 더 단어설명을 허용했습니다.",
             "currentRound", room.getCurrentRound()
         ));
         

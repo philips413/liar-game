@@ -275,6 +275,25 @@
             </div>
         </div>
 
+        <!-- 라이어 투표 팝업 -->
+        <div id="voting-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🗳️ 라이어 투표</h3>
+                    <p>라이어라고 생각되는 플레이어를 선택해주세요</p>
+                </div>
+                <div class="modal-body">
+                    <div id="voting-modal-players" class="voting-grid">
+                        <!-- 투표할 플레이어 목록이 여기에 표시됩니다 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="vote-status">투표할 플레이어를 선택해주세요</div>
+                    <button id="close-voting-modal-btn" class="btn btn-secondary" onclick="closeVotingModal()">취소</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 최후진술 팝업 -->
         <div id="final-defense-modal" class="modal-overlay hidden">
             <div class="modal-content">

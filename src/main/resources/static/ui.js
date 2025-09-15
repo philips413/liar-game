@@ -437,45 +437,94 @@ function showDescriptionCompletePhase() {
     }
 }
 
-// 투표 단계 표시
-function showVotingPhase(players) {
-    const votingPhase = document.getElementById('voting-phase');
-    votingPhase.classList.remove('hidden');
+// 투표 팝업 모달 표시
+function showVotingModal(players) {
+    const votingModal = document.getElementById('voting-modal');
+    const votingPlayersElement = document.getElementById('voting-modal-players');
 
-    const votingPlayersElement = document.getElementById('voting-players');
-    
+    // 모든 게임 단계 숨기기 (채팅창만 표시)
+    hideAllGamePhases();
+
     // 생존한 플레이어들로 투표 카드 생성 (자신 제외)
-    const alivePlayers = (players || AppState.players).filter(p => 
+    const alivePlayers = (players || AppState.players).filter(p =>
         p.isAlive && p.playerId !== AppState.playerInfo.id
     );
-    
+
     votingPlayersElement.innerHTML = alivePlayers.map(player => `
-        <div class="vote-player-card" data-player-id="${player.playerId}" onclick="handleVoteClick(${player.playerId})">
+        <div class="vote-player-card" data-player-id="${player.playerId}" onclick="handleVoteModalClick(${player.playerId})">
             <div class="vote-player-name">${player.nickname}</div>
         </div>
     `).join('');
+
+    // 투표 상태 초기화
+    const voteStatus = document.querySelector('.vote-status');
+    if (voteStatus) {
+        voteStatus.textContent = '투표할 플레이어를 선택해주세요';
+    }
+
+    votingModal.classList.remove('hidden');
 }
 
-// 투표 클릭 처리
-function handleVoteClick(targetPlayerId) {
+// 투표 단계 표시 (기존 함수 - 호환성 유지)
+function showVotingPhase(players) {
+    // 기존 투표 화면 숨기기
+    const votingPhase = document.getElementById('voting-phase');
+    if (votingPhase) {
+        votingPhase.classList.add('hidden');
+    }
+
+    // 팝업 모달로 투표 표시
+    showVotingModal(players);
+}
+
+// 투표 모달 클릭 처리
+function handleVoteModalClick(targetPlayerId) {
     // 이미 투표한 경우 무시
-    if (document.querySelector('.vote-player-card.selected')) {
+    if (document.querySelector('#voting-modal .vote-player-card.selected')) {
         return;
     }
-    
+
     // 선택 표시
-    const selectedCard = document.querySelector(`[data-player-id="${targetPlayerId}"]`);
+    const selectedCard = document.querySelector(`#voting-modal [data-player-id="${targetPlayerId}"]`);
     if (selectedCard) {
         selectedCard.classList.add('selected');
-        
-        // 확인 다이얼로그
+
+        // 투표 대상 플레이어 찾기
         const targetPlayer = AppState.players.find(p => p.playerId === targetPlayerId);
-        if (targetPlayer && confirm(`${targetPlayer.nickname}님에게 투표하시겠습니까?`)) {
-            handleVoteSubmit(targetPlayerId);
-        } else {
-            selectedCard.classList.remove('selected');
+
+        if (targetPlayer) {
+            // 상태 업데이트
+            const voteStatus = document.querySelector('.vote-status');
+            if (voteStatus) {
+                voteStatus.textContent = `${targetPlayer.nickname}님에게 투표하시겠습니까?`;
+            }
+
+            // 확인 후 투표 제출
+            if (confirm(`${targetPlayer.nickname}님에게 투표하시겠습니까?`)) {
+                handleVoteSubmit(targetPlayerId);
+                // 투표 완료 후 모달 닫기
+                closeVotingModal();
+            } else {
+                // 취소한 경우 선택 해제
+                selectedCard.classList.remove('selected');
+                if (voteStatus) {
+                    voteStatus.textContent = '투표할 플레이어를 선택해주세요';
+                }
+            }
         }
     }
+}
+
+// 투표 클릭 처리 (기존 함수 - 호환성 유지)
+function handleVoteClick(targetPlayerId) {
+    // 모달 방식으로 리다이렉트
+    handleVoteModalClick(targetPlayerId);
+}
+
+// 투표 모달 닫기
+function closeVotingModal() {
+    const votingModal = document.getElementById('voting-modal');
+    votingModal.classList.add('hidden');
 }
 
 // 투표 결과 표시
@@ -625,25 +674,11 @@ function hideFinalDefenseResultModal() {
 
 // 최후진술 완료 단계 표시
 function showFinalDefenseCompletePhase(data) {
-    const finalDefenseCompletePhase = document.getElementById('final-defense-complete-phase');
-    finalDefenseCompletePhase.classList.remove('hidden');
-    
-    if (data.accusedPlayer && data.finalDefenseText) {
-        document.getElementById('final-accused-name').textContent = data.accusedPlayer.nickname;
-        document.getElementById('final-defense-text').textContent = data.finalDefenseText;
-    }
-    
-    // 호스트에게만 재투표 시작 버튼 표시
-    const startFinalVotingBtn = document.getElementById('start-final-voting-btn');
-    const waitingMessage = finalDefenseCompletePhase.querySelector('.waiting-message');
-    
-    if (AppState.playerInfo.isHost) {
-        startFinalVotingBtn.classList.remove('hidden');
-        waitingMessage.style.display = 'none';
-    } else {
-        startFinalVotingBtn.classList.add('hidden');
-        waitingMessage.style.display = 'block';
-    }
+    // 모든 게임 단계 숨기기 (채팅창만 표시)
+    hideAllGamePhases();
+
+    // 최후진술 내용은 이미 채팅창에 표시되었으므로 추가 UI 처리 불필요
+    // 호스트는 이미 handleFinalDefenseComplete()에서 버튼을 받았음
 }
 
 // 생존/사망 투표 단계 표시
@@ -903,26 +938,34 @@ function showGameInterruptedModal(message, playerName) {
 }
 
 // 채팅 메시지 추가 함수
-function addChatMessage(senderName, message, isMyMessage = false) {
+function addChatMessage(senderName, message, messageType = false) {
     const chatMessages = document.getElementById('chat-messages');
     if (!chatMessages) return;
-    
+
     const messageDiv = document.createElement('div');
-    messageDiv.className = `chat-message ${isMyMessage ? 'my-message' : 'other-message'}`;
-    
+
+    // 메시지 타입에 따른 클래스 설정
+    if (messageType === 'final-defense') {
+        messageDiv.className = 'chat-message final-defense-message';
+    } else if (messageType === true || (typeof messageType === 'boolean' && messageType)) {
+        messageDiv.className = 'chat-message my-message';
+    } else {
+        messageDiv.className = 'chat-message other-message';
+    }
+
     const senderDiv = document.createElement('div');
     senderDiv.className = 'sender-name';
     senderDiv.textContent = senderName;
-    
+
     const textDiv = document.createElement('div');
     textDiv.className = 'message-text';
     textDiv.textContent = message;
-    
+
     messageDiv.appendChild(senderDiv);
     messageDiv.appendChild(textDiv);
-    
+
     chatMessages.appendChild(messageDiv);
-    
+
     // 스크롤을 최하단으로 이동
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
