@@ -393,6 +393,11 @@ function handleFinalVoteResult(data) {
             }, 100);
         }
 
+        // 모든 플레이어에게 최종 투표 결과 팝업 표시
+        setTimeout(() => {
+            showFinalResultModal(gameData);
+        }, 300);
+
         // 모든 플레이어에게 라운드 완료 메시지 표시
         const phaseInfo = document.getElementById('phase-info');
         if (phaseInfo) {

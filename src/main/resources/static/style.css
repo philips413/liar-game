@@ -1325,6 +1325,43 @@ textarea {
     .countdown-circle span {
         font-size: 36px;
     }
+
+    /* 일반 모달 폰트 크기 모바일 최적화 */
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .modal-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .modal-btn {
+        font-size: 0.9rem;
+        padding: 10px 20px;
+    }
+
+    .modal-content {
+        margin: 10px;
+        padding: 15px;
+    }
+
+    .modal-body {
+        font-size: 0.9rem;
+    }
+
+    /* 최후진술 모달 특별 최적화 */
+    #final-defense-modal .modal-header h3 {
+        font-size: 1.1rem;
+    }
+
+    #final-defense-modal textarea {
+        font-size: 0.9rem;
+    }
+
+    #final-defense-modal .modal-btn {
+        font-size: 0.9rem;
+        padding: 10px 18px;
+    }
 }
 
 /* 태블릿 및 데스크탑 */
@@ -2057,27 +2094,56 @@ textarea {
 @media (max-width: 768px) {
     .final-vote-options {
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
     }
 
     .final-vote-options .vote-btn {
-        padding: 18px 15px;
+        padding: 14px 12px;
     }
 
     .vote-icon {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
     }
 
     .vote-text {
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
 
     .vote-desc {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
     }
 
     #final-voting-modal .modal-content {
         width: 95%;
+        margin: 10px;
+    }
+
+    #final-voting-modal .modal-header {
+        padding: 20px 20px 10px;
+    }
+
+    #final-voting-modal .modal-header h3 {
+        font-size: 1.1rem;
+        margin-bottom: 8px;
+    }
+
+    #final-voting-modal .modal-header p {
+        font-size: 0.9rem;
+    }
+
+    .final-vote-description {
+        padding: 12px;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+    }
+
+    #final-voting-modal .modal-footer {
+        padding: 0 20px 20px;
+    }
+
+    #final-voting-modal .vote-status {
+        padding: 8px;
+        font-size: 0.9rem;
     }
 }
 
@@ -2180,41 +2246,45 @@ textarea {
 @media (max-width: 768px) {
     #waiting-result-modal .modal-content.waiting-modal {
         width: 95%;
-        margin: 20px;
+        margin: 10px;
+    }
+
+    #waiting-result-modal .modal-header h3 {
+        font-size: 1.2rem;
     }
 
     .waiting-content {
-        padding: 25px 20px;
+        padding: 20px 15px;
     }
 
     .loading-spinner {
-        width: 50px;
-        height: 50px;
+        width: 40px;
+        height: 40px;
     }
 
     .waiting-message .main-text {
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
 
     .waiting-message .sub-text {
-        font-size: 0.95rem;
+        font-size: 0.85rem;
     }
 
     .waiting-info {
-        padding: 15px;
-        gap: 12px;
-    }
-
-    .info-item {
+        padding: 12px;
         gap: 10px;
     }
 
+    .info-item {
+        gap: 8px;
+    }
+
     .info-icon {
-        font-size: 1.3rem;
+        font-size: 1.1rem;
     }
 
     .info-text {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
     }
 }
 
@@ -2394,48 +2464,226 @@ textarea {
 @media (max-width: 768px) {
     #game-winner-modal .modal-content.winner-modal {
         width: 95%;
-        margin: 20px;
+        margin: 10px;
     }
 
     .winner-header {
-        padding: 20px;
-    }
-
-    .winner-header h2 {
-        font-size: 1.5rem;
-    }
-
-    .winner-body {
-        padding: 25px 20px;
-    }
-
-    .winner-icon {
-        font-size: 3rem;
-    }
-
-    .winner-message {
-        font-size: 1.2rem;
-    }
-
-    .winner-details {
-        font-size: 1rem;
-    }
-
-    .players-roles-reveal {
         padding: 15px;
     }
 
+    .winner-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .winner-body {
+        padding: 20px 15px;
+    }
+
+    .winner-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+    }
+
+    .winner-message {
+        font-size: 1rem;
+        margin-bottom: 10px;
+    }
+
+    .winner-details {
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+    }
+
+    .players-roles-reveal {
+        padding: 12px;
+    }
+
+    .players-roles-reveal h4 {
+        font-size: 1rem;
+        margin-bottom: 10px;
+    }
+
     .role-reveal-item {
-        padding: 8px 12px;
-        font-size: 0.95rem;
+        padding: 6px 10px;
+        font-size: 0.85rem;
     }
 
     .winner-footer {
-        padding: 15px 20px;
+        padding: 12px 15px;
     }
 
     .winner-footer .modal-btn {
-        padding: 10px 25px;
-        font-size: 1rem;
+        padding: 8px 20px;
+        font-size: 0.9rem;
+    }
+}
+
+/* 최종 투표 결과 팝업 모달 */
+#final-result-modal {
+    z-index: 9999;
+}
+
+#final-result-modal .modal-content.final-result-modal {
+    max-width: 450px;
+    width: 90%;
+    border-radius: 18px;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    animation: finalResultAppear 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes finalResultAppear {
+    0% {
+        opacity: 0;
+        transform: scale(0.5) translateY(-50px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.final-result-header {
+    background: rgba(255, 255, 255, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 20px;
+    text-align: center;
+    border-radius: 18px 18px 0 0;
+}
+
+.final-result-header h2 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.final-result-body {
+    padding: 25px 20px;
+}
+
+.final-result-content {
+    text-align: center;
+}
+
+.result-icon {
+    font-size: 3.5rem;
+    margin-bottom: 15px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.result-message {
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 12px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.result-details {
+    font-size: 1rem;
+    margin-bottom: 15px;
+    opacity: 0.95;
+    line-height: 1.4;
+}
+
+.next-action {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    opacity: 0.9;
+    font-style: italic;
+}
+
+.final-result-footer {
+    background: rgba(255, 255, 255, 0.15);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 18px 20px;
+    text-align: center;
+    border-radius: 0 0 18px 18px;
+}
+
+.final-result-footer .modal-btn {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    padding: 10px 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.final-result-footer .modal-btn:hover {
+    background: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* 결과별 테마 색상 */
+.final-result-modal.eliminated {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+}
+
+.final-result-modal.survived {
+    background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+}
+
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+    #final-result-modal .modal-content.final-result-modal {
+        width: 95%;
+        margin: 10px;
+    }
+
+    .final-result-header {
+        padding: 15px;
+    }
+
+    .final-result-header h2 {
+        font-size: 1.3rem;
+    }
+
+    .final-result-body {
+        padding: 20px 15px;
+    }
+
+    .result-icon {
+        font-size: 2.8rem;
+        margin-bottom: 12px;
+    }
+
+    .result-message {
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+
+    .result-details {
+        font-size: 0.9rem;
+        margin-bottom: 12px;
+    }
+
+    .next-action {
+        font-size: 0.8rem;
+        margin-bottom: 8px;
+    }
+
+    .final-result-footer {
+        padding: 15px;
+    }
+
+    .final-result-footer .modal-btn {
+        padding: 8px 20px;
+        font-size: 0.9rem;
     }
 }

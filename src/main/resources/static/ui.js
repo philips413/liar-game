@@ -903,6 +903,95 @@ function closeWinnerModal() {
     }
 }
 
+// 최종 투표 결과 팝업 표시
+function showFinalResultModal(data) {
+    console.log('=== 최종 투표 결과 팝업 표시 ===', data);
+
+    // DOM이 완전히 로드될 때까지 대기
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => showFinalResultModal(data));
+        return;
+    }
+
+    // 모든 기존 모달 닫기
+    hideAllModals();
+
+    // 짧은 지연을 두고 모달 요소 가져오기
+    setTimeout(() => {
+        const modal = document.getElementById('final-result-modal');
+        if (!modal) {
+            console.error('final-result-modal 요소를 찾을 수 없습니다!');
+            return;
+        }
+
+        const modalContent = modal.querySelector('.modal-content.final-result-modal');
+        if (!modalContent) {
+            console.error('final-result-modal 요소를 찾을 수 없습니다!');
+            return;
+        }
+
+        const title = document.getElementById('final-result-title');
+        const icon = document.getElementById('result-icon');
+        const message = document.getElementById('result-message');
+        const details = document.getElementById('result-details');
+        const nextAction = document.getElementById('next-action');
+
+        // 필수 요소들이 없으면 오류 로그 출력
+        if (!title || !icon || !message || !details || !nextAction) {
+            console.error('최종 결과 모달의 필수 요소들을 찾을 수 없습니다:', {
+                title: !!title,
+                icon: !!icon,
+                message: !!message,
+                details: !!details,
+                nextAction: !!nextAction
+            });
+            return;
+        }
+
+        // 결과에 따른 테마 설정
+        if (data.outcome === 'eliminated') {
+            modalContent.classList.remove('survived');
+            modalContent.classList.add('eliminated');
+            title.textContent = '💀 사망 결정';
+            icon.textContent = '💀';
+            message.textContent = `${data.eliminatedName || '플레이어'}가 사망했습니다!`;
+            details.textContent = '플레이어가 제거되어 게임에서 퇴장합니다.';
+            nextAction.textContent = '라운드가 계속 진행됩니다...';
+        } else if (data.outcome === 'survived') {
+            modalContent.classList.remove('eliminated');
+            modalContent.classList.add('survived');
+            title.textContent = '🛡️ 생존 결정';
+            icon.textContent = '🛡️';
+            message.textContent = `${data.survivorName || '플레이어'}가 생존했습니다!`;
+            details.textContent = '플레이어가 계속해서 게임에 참여합니다.';
+            nextAction.textContent = '라운드가 계속 진행됩니다...';
+        } else {
+            // 기본값
+            modalContent.classList.remove('eliminated', 'survived');
+            title.textContent = '⚖️ 투표 결과';
+            icon.textContent = '⚖️';
+            message.textContent = '투표가 완료되었습니다!';
+            details.textContent = data.message || '결과가 결정되었습니다.';
+            nextAction.textContent = '게임이 계속됩니다...';
+        }
+
+        // 모달 표시
+        modal.classList.remove('hidden');
+
+        console.log('최종 투표 결과 팝업 표시 완료');
+    }, 100);
+}
+
+// 최종 투표 결과 팝업 닫기
+function closeFinalResultModal() {
+    console.log('=== 최종 투표 결과 팝업 닫기 ===');
+    const modal = document.getElementById('final-result-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        console.log('최종 투표 결과 팝업 닫기 완료');
+    }
+}
+
 // 폼 유효성 검사
 function validateForm(formId) {
     const form = document.getElementById(formId);

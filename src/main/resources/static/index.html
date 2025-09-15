@@ -390,6 +390,36 @@
                 </div>
             </div>
         </div>
+
+        <!-- 최종 투표 결과 팝업 모달 -->
+        <div id="final-result-modal" class="modal-overlay hidden">
+            <div class="modal-content final-result-modal">
+                <div class="modal-header final-result-header">
+                    <h2 id="final-result-title">⚖️ 최종 투표 결과</h2>
+                </div>
+                <div class="modal-body final-result-body">
+                    <div class="final-result-content">
+                        <div class="result-icon" id="result-icon">
+                            ⚖️
+                        </div>
+                        <div class="result-message" id="result-message">
+                            투표 결과가 나왔습니다!
+                        </div>
+                        <div class="result-details" id="result-details">
+                            최종 결정이 내려졌습니다.
+                        </div>
+                        <div class="next-action" id="next-action">
+                            게임이 계속됩니다...
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer final-result-footer">
+                    <button id="final-result-close-btn" class="modal-btn primary-btn" onclick="closeFinalResultModal()">
+                        확인
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/game.js?v=3"></script>
