@@ -807,14 +807,23 @@ function showWinnerModal(data) {
     // 모든 기존 모달 닫기
     hideAllModals();
 
-    // 짧은 지연을 두고 모달 요소 가져오기 (DOM 업데이트 대기)
-    setTimeout(() => {
+    // 모달 요소 접근을 위한 더 긴 대기시간과 재시도 로직
+    let retryCount = 0;
+    const maxRetries = 10;
+
+    function tryShowModal() {
         const modal = document.getElementById('game-winner-modal');
         if (!modal) {
-            console.error('game-winner-modal 요소를 찾을 수 없습니다!');
-            // 대체 알림 표시
-            alert('게임이 종료되었습니다!\n' + (data.message || '승부 결과를 확인할 수 없습니다.'));
-            return;
+            console.error('game-winner-modal 요소를 찾을 수 없습니다! 재시도:', retryCount + 1);
+            retryCount++;
+            if (retryCount < maxRetries) {
+                setTimeout(tryShowModal, 200);
+                return;
+            } else {
+                // 최대 재시도 후에도 실패하면 대체 알림 표시
+                alert('게임이 종료되었습니다!\n' + (data.message || '승부 결과를 확인할 수 없습니다.'));
+                return;
+            }
         }
 
         const modalContent = modal.querySelector('.modal-content.winner-modal');
@@ -882,25 +891,71 @@ function showWinnerModal(data) {
         // 모달 표시
         modal.classList.remove('hidden');
 
+        // 10초 카운트다운 시작
+        startWinnerModalCountdown();
+
         console.log('승리자 팝업 표시 완료');
-    }, 100);
+    }
+
+    // 첫 번째 시도
+    setTimeout(tryShowModal, 100);
 }
 
-// 게임 승리자 팝업 닫기
-function closeWinnerModal() {
-    console.log('=== 승리자 팝업 닫기 ===');
+// 승리자 모달 카운트다운 변수
+let winnerCountdownTimer = null;
+let countdownSeconds = 10;
+
+// 승리자 모달 10초 카운트다운 시작
+function startWinnerModalCountdown() {
+    const countdownElement = document.getElementById('countdown-timer');
+    if (!countdownElement) return;
+
+    countdownSeconds = 10;
+    countdownElement.textContent = countdownSeconds;
+
+    // 기존 타이머가 있으면 정리
+    if (winnerCountdownTimer) {
+        clearInterval(winnerCountdownTimer);
+    }
+
+    winnerCountdownTimer = setInterval(() => {
+        countdownSeconds--;
+        countdownElement.textContent = countdownSeconds;
+
+        if (countdownSeconds <= 0) {
+            clearInterval(winnerCountdownTimer);
+            winnerCountdownTimer = null;
+            // 자동으로 대기실로 이동
+            closeWinnerModalAndRedirect();
+        }
+    }, 1000);
+}
+
+// 승리자 팝업 닫기 및 대기실 이동
+function closeWinnerModalAndRedirect() {
+    console.log('=== 승리자 팝업 닫기 및 대기실 이동 ===');
     const modal = document.getElementById('game-winner-modal');
     if (modal) {
         modal.classList.add('hidden');
         console.log('승리자 팝업 닫기 완료');
-
-        // 팝업 닫힌 후 대기실로 이동 확인
-        setTimeout(() => {
-            if (confirm('대기실로 돌아가시겠습니까?')) {
-                returnToWaitingRoom();
-            }
-        }, 500);
     }
+
+    // 타이머 정리
+    if (winnerCountdownTimer) {
+        clearInterval(winnerCountdownTimer);
+        winnerCountdownTimer = null;
+    }
+
+    // 대기실로 이동
+    setTimeout(() => {
+        returnToWaitingRoom();
+    }, 300);
+}
+
+// 게임 승리자 팝업 닫기 (확인 버튼 클릭 시)
+function closeWinnerModal() {
+    console.log('=== 사용자가 확인 버튼 클릭 ===');
+    closeWinnerModalAndRedirect();
 }
 
 // 최종 투표 결과 팝업 표시
@@ -916,12 +971,22 @@ function showFinalResultModal(data) {
     // 모든 기존 모달 닫기
     hideAllModals();
 
-    // 짧은 지연을 두고 모달 요소 가져오기
-    setTimeout(() => {
+    // 모달 요소 접근을 위한 재시도 로직
+    let retryCount = 0;
+    const maxRetries = 10;
+
+    function tryShowFinalResultModal() {
         const modal = document.getElementById('final-result-modal');
         if (!modal) {
-            console.error('final-result-modal 요소를 찾을 수 없습니다!');
-            return;
+            console.error('final-result-modal 요소를 찾을 수 없습니다! 재시도:', retryCount + 1);
+            retryCount++;
+            if (retryCount < maxRetries) {
+                setTimeout(tryShowFinalResultModal, 200);
+                return;
+            } else {
+                console.error('최대 재시도 후에도 final-result-modal을 찾을 수 없습니다.');
+                return;
+            }
         }
 
         const modalContent = modal.querySelector('.modal-content.final-result-modal');
@@ -979,7 +1044,10 @@ function showFinalResultModal(data) {
         modal.classList.remove('hidden');
 
         console.log('최종 투표 결과 팝업 표시 완료');
-    }, 100);
+    }
+
+    // 첫 번째 시도
+    setTimeout(tryShowFinalResultModal, 100);
 }
 
 // 최종 투표 결과 팝업 닫기

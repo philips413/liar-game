@@ -1290,6 +1290,12 @@ function hideGameInterruptedModal() {
 
 // 모든 모달 닫기
 function hideAllModals() {
+    // 승리자 모달 카운트다운 타이머 정리
+    if (typeof winnerCountdownTimer !== 'undefined' && winnerCountdownTimer) {
+        clearInterval(winnerCountdownTimer);
+        winnerCountdownTimer = null;
+    }
+
     // 기존 모달들 제거
     const modals = document.querySelectorAll('.modal-overlay');
     modals.forEach(modal => modal.remove());

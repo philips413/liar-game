@@ -2432,6 +2432,37 @@ textarea {
     border-radius: 0 0 20px 20px;
 }
 
+.auto-redirect-info {
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 15px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#countdown-timer {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 8px;
+    animation: countdownPulse 1s infinite;
+}
+
+@keyframes countdownPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+}
+
 .winner-footer .modal-btn {
     background: rgba(255, 255, 255, 0.2);
     color: white;
@@ -2510,6 +2541,17 @@ textarea {
 
     .winner-footer {
         padding: 12px 15px;
+    }
+
+    .auto-redirect-info {
+        margin-bottom: 12px;
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+
+    #countdown-timer {
+        font-size: 1rem;
+        padding: 2px 6px;
     }
 
     .winner-footer .modal-btn {
