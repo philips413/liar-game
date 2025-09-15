@@ -294,7 +294,12 @@ public class GamePlayService {
         
         // 재투표 결과 브로드캐스트
         broadcastVoteResult(room.getCode(), finalVoteResult);
-        
+
+        // 투표 결과를 채팅창에도 브로드캐스트
+        String chatMessage = String.format("📊 생존/사망 투표 결과: 사망 %d표, 생존 %d표 - %s",
+                eliminateVotes, surviveVotes, finalVoteResult.get("message"));
+        broadcastChatMessage(room.getCode(), "시스템", chatMessage);
+
         // 라운드 종료 처리
         completeCurrentRound(room, currentRound);
     }
@@ -562,7 +567,13 @@ public class GamePlayService {
                     String.format("role: %s, eliminateVotes: %d", accused.getRole(), eliminateVotes));
             
             broadcastVoteResult(room.getCode(), finalVoteResult);
-            
+
+            // 투표 결과를 채팅창에도 브로드캐스트
+            String chatMessage = String.format("📊 생존/사망 투표 결과: 사망 %d표, 생존 %d표 - %s님이 처형되었습니다. (역할: %s)",
+                    eliminateVotes, surviveVotes, accused.getNickname(),
+                    accused.getRole() == Player.PlayerRole.LIAR ? "라이어" : "시민");
+            broadcastChatMessage(room.getCode(), "시스템", chatMessage);
+
             // 게임 종료 조건 확인
             if (accused.getRole() == Player.PlayerRole.LIAR) {
                 // 라이어가 처형되면 시민 승리
@@ -576,9 +587,15 @@ public class GamePlayService {
         } else {
             // 과반수 미달 -> 생존
             finalVoteResult.put("outcome", "survived");
-            finalVoteResult.put("message", String.format("%s님이 생존했습니다. (사망 %d표, 생존 %d표)", 
+            finalVoteResult.put("message", String.format("%s님이 생존했습니다. (사망 %d표, 생존 %d표)",
                     accused.getNickname(), eliminateVotes, surviveVotes));
             broadcastVoteResult(room.getCode(), finalVoteResult);
+
+            // 투표 결과를 채팅창에도 브로드캐스트
+            String chatMessage = String.format("📊 생존/사망 투표 결과: 사망 %d표, 생존 %d표 - %s님이 생존했습니다.",
+                    eliminateVotes, surviveVotes, accused.getNickname());
+            broadcastChatMessage(room.getCode(), "시스템", chatMessage);
+
             proceedToNextRound(room);
         }
         
@@ -781,9 +798,24 @@ public class GamePlayService {
     }
     
     private void broadcastRoundTransition(String roomCode, int nextRound) {
-        GameMessage message = GameMessage.of("ROUND_TRANSITION", roomCode, 
+        GameMessage message = GameMessage.of("ROUND_TRANSITION", roomCode,
                 Map.of("nextRound", nextRound, "message", String.format("잠시 후 %d라운드가 시작됩니다...", nextRound)));
         messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
+    }
+
+    /**
+     * 채팅창에 시스템 메시지를 브로드캐스트
+     */
+    private void broadcastChatMessage(String roomCode, String nickname, String message) {
+        Map<String, Object> data = Map.of(
+            "nickname", nickname,
+            "description", message
+        );
+
+        GameMessage chatMessage = GameMessage.of("DESC_UPDATE", roomCode, null, nickname, data);
+        messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, chatMessage);
+
+        log.info("채팅 시스템 메시지 브로드캐스트: roomCode={}, message={}", roomCode, message);
     }
 
     public void proceedNextRound(String roomCode, Long hostId) {

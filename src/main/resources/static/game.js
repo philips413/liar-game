@@ -798,7 +798,7 @@ async function handleModalFinalDefenseSubmit() {
         
         // 모달 닫기
         hideModal('final-defense-modal');
-        showNotification('최후진술이 제출되었습니다!');
+        // showNotification('최후진술이 제출되었습니다!');
         
     } catch (error) {
         console.error('최후진술 제출 오류:', error);
@@ -847,8 +847,7 @@ async function handleSubmitFinalDefense() {
 function displayVoteResultInChat(gameData) {
     console.log('투표 결과를 채팅창에 표시:', gameData);
 
-    // 투표 결과 헤더 메시지
-    addSystemMessage('🗳️ 투표 결과가 발표됩니다!', 'voting');
+    let combinedMessage = '🗳️ 투표 결과\n';
 
     // 투표 결과 상세 정보
     if (gameData.voteResults && gameData.voteResults.length > 0) {
@@ -857,18 +856,21 @@ function displayVoteResultInChat(gameData) {
 
         sortedResults.forEach((result, index) => {
             const emoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '📊';
-            addSystemMessage(`${emoji} ${result.targetName}: ${result.voteCount}표`, 'voting');
+            combinedMessage += `${emoji} ${result.targetName}: ${result.voteCount}표\n`;
         });
-    } else {
-        addSystemMessage('투표 결과가 없습니다.', 'warning');
     }
 
     // 지목 결과 메시지
     if (gameData.accusedName && gameData.accusedId) {
-        addSystemMessage(`👉 ${gameData.accusedName}님이 최다 득표로 지목되었습니다!`, 'voting');
-        addSystemMessage('곧 최후진술이 시작됩니다.', 'final-defense');
+        combinedMessage += `\n👉 ${gameData.accusedName}님이 최다 득표로 지목되었습니다!\n곧 최후진술이 시작됩니다.`;
+
+        // 통합된 메시지를 한 번에 표시
+        addCombinedSystemMessage(combinedMessage, 'vote-result');
     } else {
-        addSystemMessage('과반수 득표자가 없어 다음 라운드로 진행합니다.', 'round-end');
+        combinedMessage += '\n과반수 득표자가 없어 다음 라운드로 진행합니다.';
+
+        // 통합된 메시지를 한 번에 표시
+        addCombinedSystemMessage(combinedMessage, 'vote-result');
     }
 }
 
@@ -1180,26 +1182,26 @@ function displayVoteResultInHostPanel(gameData) {
     if (isFinalVote) {
         console.log('최후진술 투표 결과 처리');
 
-        // 최후진술 투표 결과 메시지
-        let finalVoteMessage = '⚖️ 생존/사망 투표 결과: ';
+        // 최후진술 투표 결과 통합 메시지
+        let combinedFinalVoteMessage = '⚖️ 생존/사망 투표 결과\n\n';
 
         if (gameData.outcome === 'eliminated') {
-            finalVoteMessage += `${gameData.eliminatedName || '플레이어'}가 사망했습니다.`;
-            addHostStatusMessage(finalVoteMessage, 'eliminated');
+            combinedFinalVoteMessage += `💀 ${gameData.eliminatedName || '플레이어'}가 사망했습니다.\n라운드가 완료되었습니다.`;
+            addHostStatusMessage(`${gameData.eliminatedName || '플레이어'}가 사망했습니다.`, 'eliminated');
         } else if (gameData.outcome === 'survived') {
-            finalVoteMessage += `${gameData.survivorName || '플레이어'}가 생존했습니다.`;
-            addHostStatusMessage(finalVoteMessage, 'survived');
+            combinedFinalVoteMessage += `🛡️ ${gameData.survivorName || '플레이어'}가 생존했습니다.\n라운드가 완료되었습니다.`;
+            addHostStatusMessage(`${gameData.survivorName || '플레이어'}가 생존했습니다.`, 'survived');
         } else {
-            finalVoteMessage += '결과를 확인 중입니다.';
-            addHostStatusMessage(finalVoteMessage, 'info');
+            combinedFinalVoteMessage += '결과를 확인 중입니다.\n라운드가 완료되었습니다.';
+            addHostStatusMessage('결과를 확인 중입니다.', 'info');
         }
 
         // 최후진술 투표 완료 후 호스트에게 다음 라운드 진행 버튼 표시
         addHostStatusMessage('라운드가 완료되었습니다.', 'success');
         setHostActionButton('➡️ 다음 라운드 진행', handleProceedNextRound);
 
-        // 채팅창에 시스템 메시지로 추가
-        addSystemMessage(finalVoteMessage, 'vote-result');
+        // 통합된 메시지를 채팅창에 표시
+        addCombinedSystemMessage(combinedFinalVoteMessage, 'vote-result');
 
         return; // 최후진술 투표 결과는 여기서 끝
     }
@@ -1228,8 +1230,6 @@ function displayVoteResultInHostPanel(gameData) {
             addHostStatusMessage('과반수 득표자가 없어 다음 라운드로 진행합니다.', 'info');
             setHostActionButton('➡️ 다음 라운드 진행', handleProceedNextRound);
         }
-    } else {
-        addHostStatusMessage('투표 결과가 없습니다.', 'warning');
     }
 
     // 채팅창에 시스템 메시지로 추가
@@ -1349,11 +1349,17 @@ function hideRoomDeletedModal() {
 // 설명 업데이트 처리 (다른 플레이어의 설명이 제출됨)
 function handleDescriptionUpdate(data) {
     console.log('설명 업데이트:', data);
-    
+
     const messageData = data.data || data;
     const playerId = messageData.playerId;
     const nickname = messageData.nickname;
     const description = messageData.description;
+
+    // 시스템 메시지인 경우 (nickname이 "시스템"인 경우)
+    if (nickname === "시스템" && description) {
+        addSystemMessage(description, 'info');
+        return;
+    }
 
     // 내가 제출한 설명이 아닌 경우에만 채팅창에 추가
     if (playerId && playerId !== AppState.playerInfo.id && nickname && description) {
@@ -1392,6 +1398,58 @@ function enableDescriptionInput() {
         submitDescBtn.disabled = false;
         submitDescBtn.textContent = '단어 설명';
     }
+}
+
+// 통합된 시스템 메시지 추가 (여러 줄 지원)
+function addCombinedSystemMessage(message, messageType = 'info') {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message system-message ${messageType}`;
+
+    const iconDiv = document.createElement('div');
+    iconDiv.className = 'system-icon';
+
+    // 메시지 타입에 따른 아이콘 설정
+    switch(messageType) {
+        case 'vote-result':
+            iconDiv.textContent = '📊';
+            break;
+        case 'game-start':
+            iconDiv.textContent = '🎮';
+            break;
+        case 'voting':
+            iconDiv.textContent = '🗳️';
+            break;
+        case 'description':
+            iconDiv.textContent = '📝';
+            break;
+        case 'final-defense':
+            iconDiv.textContent = '⚖️';
+            break;
+        case 'round-end':
+            iconDiv.textContent = '🏁';
+            break;
+        case 'warning':
+            iconDiv.textContent = '⚠️';
+            break;
+        default:
+            iconDiv.textContent = '💬';
+    }
+
+    const textDiv = document.createElement('div');
+    textDiv.className = 'system-text';
+    // 줄바꿈 문자를 <br> 태그로 변환
+    textDiv.innerHTML = message.replace(/\n/g, '<br>');
+
+    messageDiv.appendChild(iconDiv);
+    messageDiv.appendChild(textDiv);
+
+    chatMessages.appendChild(messageDiv);
+
+    // 스크롤을 최하단으로 이동
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 

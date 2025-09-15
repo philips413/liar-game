@@ -552,8 +552,6 @@ function displayVoteResult(data) {
                 <div class="vote-result-count">${result.voteCount}표</div>
             </div>
         `).join('');
-    } else {
-        modalContent.innerHTML = '<p>투표 결과가 없습니다.</p>';
     }
     
     // 결과에 따른 메시지 추가
