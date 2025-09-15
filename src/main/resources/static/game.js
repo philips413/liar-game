@@ -82,7 +82,6 @@ function subscribeToRoom() {
 // WebSocket 메시지 처리
 function handleWebSocketMessage(data) {
     console.log('WebSocket 메시지 수신:', data);
-    
     switch (data.type) {
         case 'PLAYER_JOINED':
             handlePlayerJoined(data);
@@ -104,6 +103,9 @@ function handleWebSocketMessage(data) {
             break;
         case 'VOTE_RESULT':
             handleVoteResult(data);
+            break;
+        case 'FINAL_VOTE_RESULT':
+            handleFinalVoteResult(data);
             break;
         case 'FINAL_DEFENSE_COMPLETE':
             handleFinalDefenseComplete(data);
@@ -326,36 +328,6 @@ function handleVoteResult(data) {
     console.log('처리할 데이터:', gameData);
     console.log('현재 플레이어 정보:', AppState.playerInfo);
 
-    // 최후진술 투표 결과인 경우 모든 팝업 닫기 및 라운드 정리
-    if (gameData.isFinalVote || gameData.eliminatedId || gameData.outcome === 'eliminated' || gameData.outcome === 'survived') {
-        console.log('최후진술 투표 결과 - 모든 팝업 닫기 및 라운드 정리');
-
-        // 모든 관련 모달/팝업 닫기
-        closeWaitingResultModal();
-        closeFinalVotingModal();
-        hideModal('final-defense-modal');
-        hideAllModals();
-
-        const finalVotingPhase = document.getElementById('final-voting-phase');
-        if (finalVotingPhase) {
-            finalVotingPhase.classList.add('hidden');
-        }
-
-        // 모든 플레이어에게 라운드 완료 메시지 표시
-        const phaseInfo = document.getElementById('phase-info');
-        if (phaseInfo) {
-            phaseInfo.textContent = '라운드 완료 - 호스트가 다음 라운드를 진행할 때까지 기다려주세요.';
-        }
-
-        console.log('라운드 완료 - 모든 팝업 및 관련 UI 제거됨');
-    }
-
-    // 호스트 패널에 투표 결과 표시
-    displayVoteResultInHostPanel(gameData);
-
-    // 모달도 표시 (기존 기능 유지)
-    // displayVoteResult(gameData);
-
     displayVoteResultInChat(gameData);
 
     // 최후진술 투표 결과가 아닌 경우에만 지목자가 있으면 최후진술 팝업 자동 표시
@@ -389,6 +361,41 @@ function handleVoteResult(data) {
             accusedId: gameData.accusedId
         });
     }
+}
+
+function handleFinalVoteResult(data) {
+    const gameData = data.data || data;
+    console.log('=== 투표 결과 처리 시작 ===');
+    console.log('원본 데이터:', data);
+    console.log('처리할 데이터:', gameData);
+    console.log('현재 플레이어 정보:', AppState.playerInfo);
+
+    // 최후진술 투표 결과인 경우 모든 팝업 닫기 및 라운드 정리
+    if (gameData.isFinalVote || gameData.eliminatedId || gameData.outcome === 'eliminated' || gameData.outcome === 'survived') {
+        console.log('최후진술 투표 결과 - 모든 팝업 닫기 및 라운드 정리');
+
+        // 모든 관련 모달/팝업 닫기
+        closeWaitingResultModal();
+        closeFinalVotingModal();
+        hideModal('final-defense-modal');
+        hideAllModals();
+
+        const finalVotingPhase = document.getElementById('final-voting-phase');
+        if (finalVotingPhase) {
+            finalVotingPhase.classList.add('hidden');
+        }
+
+        // 모든 플레이어에게 라운드 완료 메시지 표시
+        const phaseInfo = document.getElementById('phase-info');
+        if (phaseInfo) {
+            phaseInfo.textContent = '라운드 완료 - 호스트가 다음 라운드를 진행할 때까지 기다려주세요.';
+        }
+
+        console.log('라운드 완료 - 모든 팝업 및 관련 UI 제거됨');
+    }
+
+    // 호스트 패널에 투표 결과 표시
+    displayVoteResultInHostPanel(gameData);
 }
 
 // 최후진술 완료 처리
@@ -1056,19 +1063,19 @@ async function handleModalFinalVote(decision) {
         }
 
         // 성공한 경우 투표 버튼 비활성화
-        modalSurviveBtn.disabled = true;
-        modalEliminateBtn.disabled = true;
-
-        if (voteStatus) {
-            voteStatus.textContent = `${decisionText} 투표가 완료되었습니다.`;
-        }
-
-        showNotification(`${decisionText} 투표가 완료되었습니다.`);
+        // modalSurviveBtn.disabled = true;
+        // modalEliminateBtn.disabled = true;
+        //
+        // if (voteStatus) {
+        //     voteStatus.textContent = `${decisionText} 투표가 완료되었습니다.`;
+        // }
+        //
+        // showNotification(`${decisionText} 투표가 완료되었습니다.`);
 
         // 모달 닫기
         setTimeout(() => {
             closeFinalVotingModal();
-        }, 1500);
+        }, 500);
 
     } catch (error) {
         console.error('모달 생존/사망 투표 오류:', error);

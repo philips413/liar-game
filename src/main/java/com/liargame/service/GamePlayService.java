@@ -293,7 +293,7 @@ public class GamePlayService {
         }
         
         // 재투표 결과 브로드캐스트
-        broadcastVoteResult(room.getCode(), finalVoteResult);
+        broadcastFinalVoteResult(room.getCode(), finalVoteResult);
 
         // 투표 결과를 채팅창에도 브로드캐스트
         String chatMessage = String.format("📊 생존/사망 투표 결과: 사망 %d표, 생존 %d표 - %s",
@@ -795,6 +795,11 @@ public class GamePlayService {
     private void broadcastVoteResult(String roomCode, Map<String, Object> voteResult) {
         GameMessage message = GameMessage.of("VOTE_RESULT", roomCode, voteResult);
         messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
+    }
+
+    private void broadcastFinalVoteResult(String roomCode, Map<String, Object> voteResult) {
+      GameMessage message = GameMessage.of("FINAL_VOTE_RESULT", roomCode, voteResult);
+      messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
     }
     
     private void broadcastRoundTransition(String roomCode, int nextRound) {
