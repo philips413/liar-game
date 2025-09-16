@@ -1117,6 +1117,12 @@ function showAlternativeWinnerPopup(data) {
     closeBtn.addEventListener('click', () => {
         console.log('대체 팝업 닫기 - 메인화면으로 이동');
         popup.remove();
+
+        // UI 추가 초기화 (혹시 빠진 것들)
+        if (typeof resetGameUI === 'function') {
+            resetGameUI();
+        }
+
         setTimeout(() => {
             goToMainScreen();
         }, 300);
@@ -1127,6 +1133,12 @@ function showAlternativeWinnerPopup(data) {
         if (e.key === 'Escape') {
             popup.remove();
             document.removeEventListener('keydown', handleEscape);
+
+            // UI 추가 초기화 (혹시 빠진 것들)
+            if (typeof resetGameUI === 'function') {
+                resetGameUI();
+            }
+
             setTimeout(() => {
                 goToMainScreen();
             }, 300);
@@ -1672,4 +1684,73 @@ function clearChatMessages() {
     } else {
         console.warn('chat-messages 요소를 찾을 수 없습니다');
     }
+}
+
+// 게임 종료 시 모든 UI 초기화
+function resetGameUI() {
+    console.log('게임 UI 완전 초기화 시작...');
+
+    // 1. 호스트 컨트롤 영역 초기화
+    clearHostActionButtons();
+    const hostPanel = document.getElementById('host-control-panel');
+    if (hostPanel) {
+        hostPanel.classList.add('hidden');
+    }
+
+    // 2. 채팅창 초기화
+    clearChatMessages();
+
+    // 3. 단어 설명 입력란 초기화 및 활성화
+    const descriptionInput = document.getElementById('description-input');
+    if (descriptionInput) {
+        descriptionInput.value = '';
+        descriptionInput.disabled = false;
+        descriptionInput.placeholder = '받은 단어에 대해 설명해주세요...';
+    }
+
+    // 4. 단어 설명 제출 버튼 활성화
+    const submitBtn = document.getElementById('submit-description-btn');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '단어 설명';
+    }
+
+    // 5. 게임 상태 정보 초기화
+    const phaseInfo = document.getElementById('phase-info');
+    if (phaseInfo) {
+        phaseInfo.textContent = '게임 준비 중...';
+    }
+
+    // 6. 내 역할 및 단어 정보 초기화
+    const myRole = document.getElementById('my-role');
+    if (myRole) {
+        myRole.textContent = '';
+    }
+
+    const myWord = document.getElementById('my-word');
+    if (myWord) {
+        myWord.textContent = '';
+    }
+
+    // 7. 라운드 정보 초기화
+    const currentRound = document.getElementById('current-round');
+    if (currentRound) {
+        currentRound.textContent = '1';
+    }
+
+    // 8. 모든 게임 페이즈 숨김
+    const gamePhases = document.querySelectorAll('.game-phase');
+    gamePhases.forEach(phase => {
+        phase.classList.add('hidden');
+    });
+
+    // 9. 채팅 입력 영역을 기본 상태로 복원
+    const chatContainer = document.getElementById('game-chat-container');
+    const descriptionSection = document.getElementById('permanent-description-input');
+    if (chatContainer && descriptionSection) {
+        chatContainer.style.display = 'block';
+        descriptionSection.style.display = 'block';
+    }
+
+    console.log('게임 UI 완전 초기화 완료');
 }

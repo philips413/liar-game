@@ -463,6 +463,15 @@ function handleGameEnd(data) {
     // 모든 대기 모달 닫기
     closeWaitingResultModal();
 
+    // 게임 UI 완전 초기화
+    console.log('게임 UI 초기화 실행...');
+    if (typeof resetGameUI === 'function') {
+        resetGameUI();
+        console.log('게임 UI 초기화 완료');
+    } else {
+        console.warn('resetGameUI 함수를 찾을 수 없습니다');
+    }
+
     // 항상 대체 팝업을 사용하여 확실히 표시
     console.log('대체 승리자 팝업 직접 호출...');
     if (typeof showAlternativeWinnerPopup === 'function') {
