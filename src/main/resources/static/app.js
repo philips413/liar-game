@@ -246,9 +246,6 @@ async function handleCreateRoom(event) {
         AppState.roomInfo.maxPlayers = maxPlayers;
         AppState.roomInfo.roundLimit = roundLimit;
         
-        console.log('방 생성 완료 - 호스트 상태 설정:', AppState.playerInfo.isHost);
-        console.log('플레이어 정보:', AppState.playerInfo);
-
         // WebSocket 연결
         await connectWebSocket();
 
@@ -256,7 +253,6 @@ async function handleCreateRoom(event) {
         showWaitingRoom();
         
     } catch (error) {
-        console.error('방 생성 오류:', error);
         showNotification(error.message);
     } finally {
         showLoading(false);
@@ -517,25 +513,6 @@ function showLoading(show) {
 function showNotification(message) {
     document.getElementById('notification-message').textContent = message;
     showModal('notification-modal');
-}
-
-// 유틸리티 함수들
-function formatPlayerList(players) {
-    if (!players || !Array.isArray(players)) {
-        console.warn('플레이어 데이터가 유효하지 않습니다:', players);
-        return [];
-    }
-    
-    return players.map(player => {
-        let badges = [];
-        if (player.isHost) badges.push('호스트');
-        if (player.playerId === AppState.playerInfo.id) badges.push('나');
-        
-        return {
-            ...player,
-            badgeText: badges.join(', ')
-        };
-    });
 }
 
 // 에러 핸들링

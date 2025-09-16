@@ -10,8 +10,6 @@ function updatePlayersList() {
         return;
     }
     
-    console.log('플레이어 목록 업데이트:', AppState.players);
-    
     // 플레이어 수 업데이트
     playerCountElement.textContent = AppState.players.length;
     
@@ -32,74 +30,47 @@ function updatePlayersList() {
     
     // 게임 시작 버튼 활성화 조건 확인
     const startGameBtn = document.getElementById('start-game-btn');
-    console.log('updatePlayersList - 호스트 상태:', AppState.playerInfo.isHost, '플레이어 수:', AppState.players.length);
-    
+
     if (startGameBtn) {
         if (AppState.playerInfo.isHost === true) {
-            // 호스트인 경우: 플레이어 수에 따라 버튼 활성화/비활성화
-            console.log('호스트 확인됨 - 플레이어 수 체크:', AppState.players.length);
             startGameBtn.disabled = AppState.players.length < 3;
             
             if (AppState.players.length >= 3) {
-                console.log('3명 이상 - 게임 시작 버튼 표시');
                 startGameBtn.classList.remove('hidden');
             } else {
-                console.log('3명 미만 - 게임 시작 버튼 숨김');
                 startGameBtn.classList.add('hidden');
             }
         } else {
-            // 호스트가 아닌 경우: 버튼 숨김
-            console.log('호스트 아님 - 게임 시작 버튼 숨김');
             startGameBtn.classList.add('hidden');
         }
     } else {
-        console.error('게임 시작 버튼을 찾을 수 없습니다');
     }
 }
 
 // 게임 시작 버튼 상태를 강제로 업데이트
 function forceUpdateStartGameButton() {
-    console.log('강제 게임 시작 버튼 업데이트 시작');
     const startGameBtn = document.getElementById('start-game-btn');
     
     if (!startGameBtn) {
-        console.error('게임 시작 버튼이 없습니다');
         return;
     }
-    
-    console.log('현재 AppState:', {
-        isHost: AppState.playerInfo.isHost,
-        playerCount: AppState.players.length,
-        players: AppState.players
-    });
-    
+
     // 강제로 호스트 체크와 버튼 표시/숨김
     if (AppState.playerInfo.isHost === true) {
-        console.log('호스트 확인됨 - 버튼 표시 조건 확인');
         if (AppState.players.length >= 3) {
             startGameBtn.classList.remove('hidden');
             startGameBtn.disabled = false;
-            console.log('게임 시작 버튼 표시됨');
         } else {
             startGameBtn.classList.add('hidden');
-            console.log('플레이어 부족으로 버튼 숨김');
         }
     } else {
         startGameBtn.classList.add('hidden');
-        console.log('호스트가 아니므로 버튼 숨김');
     }
 }
 
 // 호스트 전용 게임 시작 컨트롤 표시
 function showHostGameStartControls() {
-    console.log('호스트 게임 시작 컨트롤 표시');
-    
-    // 모든 게임 단계 숨김
     hideAllGamePhases();
-    
-    // 호스트 컨트롤 패널에 게임 시작 버튼 설정
-    // addHostStatusMessage('게임이 시작되었습니다. 설명 단계를 시작해주세요.', 'info');
-    // setHostActionButton('📝 설명 단계 시작', handleHostStartDescription);
 }
 
 // 호스트가 아닌 플레이어 대기 화면
@@ -283,16 +254,7 @@ function updateGamePhaseDisplay(data) {
                 break;
             case 'FINAL_VOTING':
                 phaseInfo.textContent = '생존/사망 투표';
-                console.log('=== FINAL_VOTING 케이스 (비호스트) ===');
-                console.log('data:', data);
-                console.log('data.accusedPlayer:', data.accusedPlayer);
-                console.log('data.data:', data.data);
-
-                // accusedPlayer 데이터 찾기
                 let accusedPlayer = data.accusedPlayer || (data.data && data.data.accusedPlayer);
-                console.log('최종 accusedPlayer:', accusedPlayer);
-
-                // 호스트가 아닌 플레이어도 재투표 화면 표시
                 showFinalVotingPhase(accusedPlayer);
                 break;
             case 'ROUND_END':
@@ -315,7 +277,6 @@ function updateGamePhaseDisplay(data) {
     
     switch (data.state || AppState.gamePhase) {
         case 'DESC':
-            // 설명 단계 UI는 표시하지만 팝업은 호스트가 명시적으로 시작했을 때만
             showDescriptionPhaseWithoutModal();
             phaseInfo.textContent = '설명 작성';
             break;
@@ -332,15 +293,7 @@ function updateGamePhaseDisplay(data) {
             phaseInfo.textContent = '최후진술 완료';
             break;
         case 'FINAL_VOTING':
-            console.log('=== FINAL_VOTING 케이스 (호스트) ===');
-            console.log('data:', data);
-            console.log('data.accusedPlayer:', data.accusedPlayer);
-            console.log('data.data:', data.data);
-
-            // accusedPlayer 데이터 찾기
             let accusedPlayerHost = data.accusedPlayer || (data.data && data.data.accusedPlayer);
-            console.log('최종 accusedPlayer (호스트):', accusedPlayerHost);
-
             showFinalVotingPhase(accusedPlayerHost);
             phaseInfo.textContent = '생존/사망 투표';
             break;
@@ -443,12 +396,7 @@ function showDescriptionCompletePhase() {
     if (descCompletePhase) {
         descCompletePhase.classList.remove('hidden');
     }
-    
-    if (AppState.playerInfo.isHost) {
-        // 호스트 컨트롤 패널에 완료 메시지와 투표 시작 버튼 표시 (중복 제거)
-        // addHostStatusMessage('모든 플레이어의 설명이 완료되었습니다.', 'success');
-        // setHostActionButton('🗳️ 투표 시작', handleStartVoting);
-    }
+
 }
 
 // 투표 팝업 모달 표시
@@ -1267,14 +1215,6 @@ function addSystemMessage(message, messageType = 'info') {
     
     // 스크롤을 최하단으로 이동
     chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-// 채팅창 초기화
-function clearChatMessages() {
-    const chatMessages = document.getElementById('chat-messages');
-    if (chatMessages) {
-        chatMessages.innerHTML = '';
-    }
 }
 
 // 설명 입력 필드 문자 수 제한 및 버튼 상태 관리
