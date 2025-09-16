@@ -20,4 +20,8 @@ public interface MessageLogRepository extends JpaRepository<MessageLog, Long> {
     // 방 삭제를 위한 메소드들 추가
     void deleteByRoundRoundId(Long roundId);
     void deleteByRoomId(Long roomId);
+
+    // 특정 방의 모든 메시지 삭제 (게임 시작 시 채팅 초기화용)
+    @Query("DELETE FROM MessageLog m WHERE m.roomId = :roomId")
+    void deleteAllByRoomId(@Param("roomId") Long roomId);
 }

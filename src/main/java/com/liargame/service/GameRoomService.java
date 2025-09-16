@@ -111,28 +111,30 @@ public class GameRoomService {
     public void startGame(String roomCode, Long hostPlayerId) {
         GameRoom room = gameRoomRepository.findByCode(roomCode)
                 .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
-        
+
         Player host = playerRepository.findById(hostPlayerId)
                 .orElseThrow(() -> new RuntimeException("플레이어를 찾을 수 없습니다"));
-        
+
         if (!host.getIsHost()) {
             throw new RuntimeException("호스트만 게임을 시작할 수 있습니다");
         }
-        
+
         List<Player> activePlayers = playerRepository.findByRoomCodeAndLeftAtIsNull(roomCode);
         if (activePlayers.size() < 3) {
             throw new RuntimeException("최소 3명 이상의 플레이어가 필요합니다");
         }
-        
+
+        // 게임 종료 후 새로운 방이 생성되므로 여기서는 채팅 초기화 불필요
+
         room.setState(GameRoom.RoomState.ROUND);
         room.setCurrentRound(1);
         gameRoomRepository.save(room);
-        
+
         startNewRound(room, 1);
-        
-        logAudit(room.getRoomId(), hostPlayerId, "GAME_STARTED", 
+
+        logAudit(room.getRoomId(), hostPlayerId, "GAME_STARTED",
                 String.format("players: %d", activePlayers.size()));
-        
+
         // 웹소켓으로 게임 시작 알림
         broadcastGameStarted(roomCode);
     }
@@ -286,9 +288,122 @@ public class GameRoomService {
         room.setState(GameRoom.RoomState.END);
         room.setEndedAt(LocalDateTime.now());
         gameRoomRepository.save(room);
-        
-        logAudit(room.getRoomId(), null, "GAME_ENDED", 
+
+        logAudit(room.getRoomId(), null, "GAME_ENDED",
                 String.format("reason: %s", reason));
+    }
+
+    // 게임 종료 후 새로운 방 생성 및 플레이어 이동
+    public Map<String, Object> createNewRoomAfterGame(String oldRoomCode) {
+        GameRoom oldRoom = gameRoomRepository.findByCode(oldRoomCode)
+                .orElseThrow(() -> new RuntimeException("기존 방을 찾을 수 없습니다"));
+
+        // 기존 방의 살아있는 플레이어들 조회
+        List<Player> activePlayers = playerRepository.findByRoomCodeAndLeftAtIsNull(oldRoomCode);
+        if (activePlayers.isEmpty()) {
+            log.warn("새 방 생성 시 활성 플레이어가 없습니다: {}", oldRoomCode);
+            return null;
+        }
+
+        // 기존 호스트 찾기
+        Player oldHost = activePlayers.stream()
+                .filter(Player::getIsHost)
+                .findFirst()
+                .orElse(activePlayers.get(0)); // 호스트가 없으면 첫 번째 플레이어를 호스트로
+
+        // 새로운 방 생성
+        String newRoomCode = generateRoomCode();
+        GameRoom newRoom = GameRoom.builder()
+                .code(newRoomCode)
+                .maxPlayers(oldRoom.getMaxPlayers())
+                .roundLimit(oldRoom.getRoundLimit())
+                .state(GameRoom.RoomState.LOBBY)
+                .theme(oldRoom.getTheme()) // 같은 테마 유지
+                .build();
+
+        gameRoomRepository.save(newRoom);
+
+        log.info("게임 종료 후 새 방 생성: {} -> {}", oldRoomCode, newRoomCode);
+
+        // 기존 플레이어들을 새 방으로 이동
+        Map<Long, Long> playerIdMapping = movePlayersToNewRoom(activePlayers, newRoom, oldHost);
+
+        // 기존 방 정리
+        cleanupOldRoom(oldRoom);
+
+        logAudit(newRoom.getRoomId(), oldHost.getPlayerId(), "NEW_ROOM_CREATED_AFTER_GAME",
+                String.format("oldRoom: %s, players: %d", oldRoomCode, activePlayers.size()));
+
+        // 새 방 정보와 플레이어 ID 매핑 정보 반환
+        Map<String, Object> result = new HashMap<>();
+        result.put("newRoomCode", newRoomCode);
+        result.put("playerIdMapping", playerIdMapping);
+
+        return result;
+    }
+
+    private Map<Long, Long> movePlayersToNewRoom(List<Player> players, GameRoom newRoom, Player originalHost) {
+        List<Player> newPlayers = new ArrayList<>();
+        Map<Long, Long> playerIdMapping = new HashMap<>(); // oldId -> newId
+
+        for (int i = 0; i < players.size(); i++) {
+            Player oldPlayer = players.get(i);
+            boolean isHost = oldPlayer.getPlayerId().equals(originalHost.getPlayerId());
+
+            Player newPlayer = Player.builder()
+                    .room(newRoom)
+                    .nickname(oldPlayer.getNickname())
+                    .isHost(isHost)
+                    .role(Player.PlayerRole.CITIZEN)
+                    .isAlive(true)
+                    .build();
+
+            newPlayers.add(newPlayer);
+            log.info("플레이어 이동: {} -> {} (호스트: {})",
+                    oldPlayer.getNickname(), newRoom.getCode(), isHost);
+        }
+
+        playerRepository.saveAll(newPlayers);
+
+        // 저장 후 ID 매핑 생성 (저장된 후에야 새 ID를 알 수 있음)
+        for (int i = 0; i < players.size(); i++) {
+            Player oldPlayer = players.get(i);
+            Player newPlayer = newPlayers.get(i);
+            playerIdMapping.put(oldPlayer.getPlayerId(), newPlayer.getPlayerId());
+            log.info("플레이어 ID 매핑: {} ({}) -> {} ({})",
+                    oldPlayer.getPlayerId(), oldPlayer.getNickname(),
+                    newPlayer.getPlayerId(), newPlayer.getNickname());
+        }
+
+        log.info("새 방 {}에 {} 명의 플레이어 이동 완료", newRoom.getCode(), newPlayers.size());
+        return playerIdMapping;
+    }
+
+    private void cleanupOldRoom(GameRoom oldRoom) {
+        String oldRoomCode = oldRoom.getCode();
+        Long oldRoomId = oldRoom.getRoomId();
+
+        log.info("기존 방 {} 정리 시작", oldRoomCode);
+
+        try {
+            // 기존 방의 모든 관련 데이터 삭제
+            List<Round> rounds = roundRepository.findByRoomCodeOrderByIdxAsc(oldRoomCode);
+            for (Round round : rounds) {
+                voteRepository.deleteByRoundRoundId(round.getRoundId());
+                messageLogRepository.deleteByRoundRoundId(round.getRoundId());
+            }
+
+            roundRepository.deleteByRoomRoomId(oldRoomId);
+            messageLogRepository.deleteByRoomId(oldRoomId);
+            auditLogRepository.deleteByRoomId(oldRoomId);
+            playerRepository.deleteByRoomRoomId(oldRoomId);
+            gameRoomRepository.delete(oldRoom);
+
+            log.info("기존 방 {} 정리 완료", oldRoomCode);
+
+        } catch (Exception e) {
+            log.error("기존 방 {} 정리 중 오류 발생: {}", oldRoomCode, e.getMessage(), e);
+        }
     }
     
     private String generateRoomCode() {

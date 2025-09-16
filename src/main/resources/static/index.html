@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#667eea">
     <title>라이어 게임</title>
-    <link rel="stylesheet" href="/style.css?v=4">
+    <link rel="stylesheet" href="/style.css?v=9">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 </head>
@@ -235,7 +235,12 @@
             <div class="loading-text">처리 중...</div>
         </div>
 
-        <!-- 알림 팝업 -->
+        <!-- 토스트 알림 컨테이너 -->
+        <div id="toast-container" class="toast-container">
+            <!-- 토스트 알림들이 여기에 동적으로 추가됩니다 -->
+        </div>
+
+        <!-- 알림 팝업 (기존 유지, 중요한 알림용) -->
         <div id="notification-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-body">
@@ -425,8 +430,8 @@
         </div>
     </div>
 
-    <script src="/game.js?v=4"></script>
-    <script src="/ui.js?v=4"></script>
-    <script src="/app.js?v=4"></script>
+    <script src="/game.js?v=10"></script>
+    <script src="/ui.js?v=10"></script>
+    <script src="/app.js?v=10"></script>
 </body>
 </html>

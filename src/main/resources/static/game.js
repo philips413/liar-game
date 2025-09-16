@@ -188,6 +188,8 @@ function handleRoomStateUpdate(data) {
 function handleGameStarted(data) {
     console.log('게임 시작:', data);
 
+    // 게임 종료 후 새로운 방이 생성되므로 여기서는 채팅 초기화 불필요
+
     // 새 게임/라운드 시작 시 최후진술 완료 플래그 초기화
     AppState.finalDefenseCompleted = false;
     console.log('게임 시작 - 최후진술 완료 플래그 초기화');
@@ -219,7 +221,7 @@ function handleGameStarted(data) {
             AppState.playerInfo.role = myPlayer.role;
             AppState.playerInfo.cardWord = myPlayer.cardWord;
             console.log('내 역할 업데이트:', AppState.playerInfo.role, '카드 단어:', AppState.playerInfo.cardWord);
-            
+
             // 대기실 역할 정보 즉시 업데이트 (게임 시작 전에)
             if (typeof updateWaitingRoomRoleDisplay === 'function') {
                 updateWaitingRoomRoleDisplay();
@@ -230,7 +232,7 @@ function handleGameStarted(data) {
     } else {
         console.warn('플레이어 목록이 없습니다. 기존 상태 유지');
     }
-    
+
     showGameScreen();
 }
 
@@ -455,15 +457,33 @@ function handleFinalVotingStart(data) {
 // 게임 종료 처리
 function handleGameEnd(data) {
     const gameData = data.data || data;
-    console.log('게임 종료:', gameData);
+    console.log('=== 게임 종료 핸들러 시작 ===', gameData);
+    console.log('게임 데이터 전체:', JSON.stringify(gameData, null, 2));
 
     // 모든 대기 모달 닫기
     closeWaitingResultModal();
 
-    // 승리자 팝업 표시 (모든 플레이어에게)
-    showWinnerModal(gameData);
+    // 항상 대체 팝업을 사용하여 확실히 표시
+    console.log('대체 승리자 팝업 직접 호출...');
+    if (typeof showAlternativeWinnerPopup === 'function') {
+        showAlternativeWinnerPopup(gameData);
+        console.log('대체 승리자 팝업 호출 완료');
+    } else {
+        console.error('showAlternativeWinnerPopup 함수를 찾을 수 없습니다!');
+        // 최후의 수단 - 단순 알림
+        alert('게임이 종료되었습니다!\n' + (gameData.message || '결과를 확인할 수 없습니다.'));
 
-    // 자동 이동은 팝업 닫기 버튼에서 처리하므로 제거
+        // 메인화면으로 이동
+        setTimeout(() => {
+            if (typeof goToMainScreen === 'function') {
+                goToMainScreen();
+            } else {
+                window.location.reload();
+            }
+        }, 2000);
+    }
+
+    console.log('=== 게임 종료 핸들러 완료 ===');
 }
 
 // 게임 중단 처리
@@ -821,43 +841,6 @@ async function handleModalFinalDefenseSubmit() {
     }
 }
 
-// 최후진술 제출
-async function handleSubmitFinalDefense() {
-    const finalDefenseText = document.getElementById('final-defense-input').value.trim();
-    
-    if (!finalDefenseText) {
-        showNotification('최후진술을 입력해주세요.');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/final-defense`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                playerId: AppState.playerInfo.id,
-                finalDefense: finalDefenseText
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error('최후진술 제출에 실패했습니다.');
-        }
-        
-        // UI 비활성화
-        document.getElementById('final-defense-input').disabled = true;
-        document.getElementById('submit-final-defense-btn').disabled = true;
-        
-        showNotification('최후진술이 제출되었습니다.');
-        
-    } catch (error) {
-        console.error('최후진술 제출 오류:', error);
-        showNotification(error.message);
-    }
-}
-
 // 투표 결과를 채팅창에 표시 (모든 플레이어)
 function displayVoteResultInChat(gameData) {
     console.log('투표 결과를 채팅창에 표시:', gameData);
@@ -887,43 +870,6 @@ function displayVoteResultInChat(gameData) {
         // 통합된 메시지를 한 번에 표시
         addCombinedSystemMessage(combinedMessage, 'vote-result');
     }
-}
-
-// 최후진술을 채팅창에 표시 (모든 플레이어)
-function displayFinalDefenseInChat(accusedPlayer, finalDefenseText) {
-    console.log('최후진술을 채팅창에 표시:', accusedPlayer.nickname, finalDefenseText);
-
-    // 최후진술 시작 알림
-    addSystemMessage(`⚖️ ${accusedPlayer.nickname}님의 최후진술이 시작됩니다`, 'final-defense');
-
-    // 최후진술 내용을 특별한 스타일로 표시
-    const chatMessages = document.getElementById('chat-messages');
-    if (chatMessages) {
-        const defenseDiv = document.createElement('div');
-        defenseDiv.className = 'chat-message final-defense-message';
-
-        const headerDiv = document.createElement('div');
-        headerDiv.className = 'final-defense-header';
-        headerDiv.innerHTML = `
-            <div class="defense-icon">🎭</div>
-            <div class="defense-title">${accusedPlayer.nickname}님의 최후진술</div>
-        `;
-
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'final-defense-content';
-        contentDiv.textContent = `"${finalDefenseText}"`;
-
-        defenseDiv.appendChild(headerDiv);
-        defenseDiv.appendChild(contentDiv);
-
-        chatMessages.appendChild(defenseDiv);
-
-        // 스크롤을 최하단으로 이동
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    // 생존/사망 투표 안내 메시지
-    addSystemMessage('호스트가 생존/사망 투표를 시작할 때까지 기다려주세요', 'info');
 }
 
 // 생존/사망 투표 시작 (호스트)
@@ -1070,16 +1016,6 @@ async function handleModalFinalVote(decision) {
             throw new Error(errorMessage);
         }
 
-        // 성공한 경우 투표 버튼 비활성화
-        // modalSurviveBtn.disabled = true;
-        // modalEliminateBtn.disabled = true;
-        //
-        // if (voteStatus) {
-        //     voteStatus.textContent = `${decisionText} 투표가 완료되었습니다.`;
-        // }
-        //
-        // showNotification(`${decisionText} 투표가 완료되었습니다.`);
-
         // 모달 닫기
         setTimeout(() => {
             closeFinalVotingModal();
@@ -1104,17 +1040,19 @@ async function handleModalFinalVote(decision) {
 // 대기실로 돌아가기
 function returnToWaitingRoom() {
     console.log('대기실로 돌아가는 중...');
-    
+
+    // 새로운 방 생성 시스템으로 변경되어 여기서는 채팅 초기화 불필요
+
     // 게임 상태 초기화
     AppState.gameState = null;
     AppState.gamePhase = null;
     AppState.roomInfo.state = 'LOBBY';
     AppState.roomInfo.currentRound = 1;
-    
+
     // 플레이어 역할 초기화
     AppState.playerInfo.role = null;
     AppState.playerInfo.cardWord = null;
-    
+
     // 플레이어들의 역할과 생존 상태 초기화
     AppState.players = AppState.players.map(player => ({
         ...player,
@@ -1122,7 +1060,7 @@ function returnToWaitingRoom() {
         isAlive: true,
         cardWord: null
     }));
-    
+
     // 대기실 화면으로 전환
     showWaitingRoom();
 }
@@ -1211,9 +1149,20 @@ function displayVoteResultInHostPanel(gameData) {
             addHostStatusMessage('결과를 확인 중입니다.', 'info');
         }
 
-        // 최후진술 투표 완료 후 호스트에게 다음 라운드 진행 버튼 표시
+        // 최후진술 투표 완료 후 처리
         addHostStatusMessage('라운드가 완료되었습니다.', 'success');
-        setHostActionButton('➡️ 다음 라운드 진행', handleProceedNextRound);
+
+        // 게임이 종료되지 않는 경우에만 다음 라운드 진행 버튼 표시
+        console.log('최후진술 투표 완료 - willGameEnd:', gameData.willGameEnd);
+        if (!gameData.willGameEnd) {
+            console.log('게임이 계속 진행됨 - 다음 라운드 진행 버튼 표시');
+            setHostActionButton('➡️ 다음 라운드 진행', handleProceedNextRound);
+        } else {
+            // 게임이 종료되는 경우 버튼 표시하지 않음
+            console.log('게임이 종료됨 - 다음 라운드 진행 버튼 숨김');
+            clearHostActionButtons();
+            addHostStatusMessage('게임이 곧 종료됩니다.', 'info');
+        }
 
         // 통합된 메시지를 채팅창에 표시
         addCombinedSystemMessage(combinedFinalVoteMessage, 'vote-result');
@@ -1243,7 +1192,18 @@ function displayVoteResultInHostPanel(gameData) {
             clearHostActionButtons(); // 최후진술 대기 중이므로 버튼 제거
         } else {
             addHostStatusMessage('과반수 득표자가 없어 다음 라운드로 진행합니다.', 'info');
-            setHostActionButton('➡️ 다음 라운드 진행', handleProceedNextRound);
+
+            // 게임이 종료되지 않는 경우에만 다음 라운드 진행 버튼 표시
+            console.log('일반 투표 완료 - willGameEnd:', gameData.willGameEnd);
+            if (!gameData.willGameEnd) {
+                console.log('게임이 계속 진행됨 - 다음 라운드 진행 버튼 표시');
+                setHostActionButton('➡️ 다음 라운드 진행', handleProceedNextRound);
+            } else {
+                // 게임이 종료되는 경우 버튼 표시하지 않음
+                console.log('게임이 종료됨 - 다음 라운드 진행 버튼 숨김');
+                clearHostActionButtons();
+                addHostStatusMessage('게임이 곧 종료됩니다.', 'info');
+            }
         }
     }
 
@@ -1296,9 +1256,11 @@ function hideAllModals() {
         winnerCountdownTimer = null;
     }
 
-    // 기존 모달들 제거
+    // 기존 모달들 숨김 (remove 대신 hidden 클래스 추가)
     const modals = document.querySelectorAll('.modal-overlay');
-    modals.forEach(modal => modal.remove());
+    modals.forEach(modal => {
+        modal.classList.add('hidden');
+    });
 }
 
 // 방 삭제 처리 (호스트가 나간 경우)

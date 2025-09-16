@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional
 public class GamePlayService {
-    
+
     private final GameRoomRepository gameRoomRepository;
     private final PlayerRepository playerRepository;
     private final RoundRepository roundRepository;
@@ -26,6 +26,7 @@ public class GamePlayService {
     private final MessageLogRepository messageLogRepository;
     private final AuditLogRepository auditLogRepository;
     private final SimpMessageSendingOperations messagingTemplate;
+    private final GameRoomService gameRoomService;
 
     public void submitDescription(String roomCode, Long playerId, String description) {
         GameRoom room = gameRoomRepository.findByCode(roomCode)
@@ -292,6 +293,10 @@ public class GamePlayService {
                     String.format("role: %s", accused.getRole()));
         }
         
+        // 게임 종료 여부 확인 (라운드 제한 또는 승부 결정)
+        boolean willGameEnd = checkWillGameEnd(room, accused, finalVoteResult);
+        finalVoteResult.put("willGameEnd", willGameEnd);
+
         // 재투표 결과 브로드캐스트
         broadcastFinalVoteResult(room.getCode(), finalVoteResult);
 
@@ -304,11 +309,45 @@ public class GamePlayService {
         completeCurrentRound(room, currentRound);
     }
     
+    // 게임 종료 여부 확인 메서드
+    private boolean checkWillGameEnd(GameRoom room, Player accused, Map<String, Object> finalVoteResult) {
+        log.info("게임 종료 여부 확인: room={}, currentRound={}, roundLimit={}, accusedRole={}, outcome={}",
+                room.getCode(), room.getCurrentRound(), room.getRoundLimit(),
+                accused.getRole(), finalVoteResult.get("outcome"));
+
+        // 라이어가 제거된 경우 게임 종료
+        if ("eliminated".equals(finalVoteResult.get("outcome")) && accused.getRole() == Player.PlayerRole.LIAR) {
+            log.info("라이어가 제거되어 게임 종료");
+            return true;
+        }
+
+        // 마지막 라운드인 경우 게임 종료
+        if (room.getCurrentRound() >= room.getRoundLimit()) {
+            log.info("마지막 라운드에 도달하여 게임 종료: currentRound={}, roundLimit={}",
+                    room.getCurrentRound(), room.getRoundLimit());
+            return true;
+        }
+
+        // 생존한 플레이어가 3명 미만인 경우 게임 종료 (라이어 포함)
+        List<Player> alivePlayers = playerRepository.findByRoomCodeAndLeftAtIsNull(room.getCode())
+                .stream()
+                .filter(Player::getIsAlive)
+                .collect(Collectors.toList());
+
+        if (alivePlayers.size() < 3) {
+            log.info("생존 플레이어 부족으로 게임 종료: alivePlayers={}", alivePlayers.size());
+            return true;
+        }
+
+        log.info("게임 계속 진행 가능");
+        return false;
+    }
+
     private void completeCurrentRound(GameRoom room, Round currentRound) {
         currentRound.setState(Round.RoundState.END);
         currentRound.setEndedAt(LocalDateTime.now());
         roundRepository.save(currentRound);
-        
+
         // 다음 라운드 시작 또는 게임 종료
         if (room.getCurrentRound() < room.getRoundLimit()) {
             proceedToNextRound(room);
@@ -494,7 +533,13 @@ public class GamePlayService {
                 proceedToNextRound(room);
             }
         }
-        
+
+        // 일반 투표 결과에도 게임 종료 여부 포함
+        boolean willGameEnd = room.getCurrentRound() >= room.getRoundLimit();
+        log.info("일반 투표 결과 - 게임 종료 여부: room={}, currentRound={}, roundLimit={}, willGameEnd={}",
+                room.getCode(), room.getCurrentRound(), room.getRoundLimit(), willGameEnd);
+        voteResult.put("willGameEnd", willGameEnd);
+
         broadcastVoteResult(room.getCode(), voteResult);
     }
     
@@ -709,15 +754,15 @@ public class GamePlayService {
         room.setState(GameRoom.RoomState.END);
         room.setEndedAt(LocalDateTime.now());
         gameRoomRepository.save(room);
-        
+
         // 모든 플레이어 정보 수집
         List<Player> allPlayers = playerRepository.findByRoomCodeAndLeftAtIsNull(room.getCode());
         Player liar = allPlayers.stream()
                 .filter(p -> p.getRole() == Player.PlayerRole.LIAR)
                 .findFirst()
                 .orElse(keyPlayer);
-        
-        // 모든 플레이어에게 동일한 게임 종료 데이터 브로드캐스트
+
+        // 모든 플레이어에게 게임 종료 데이터 브로드캐스트 (새로운 방 생성 없이)
         Map<String, Object> gameEndData = new HashMap<>();
         gameEndData.put("winner", winnerType);
         gameEndData.put("liarId", liar != null ? liar.getPlayerId() : null);
@@ -734,20 +779,20 @@ public class GamePlayService {
         if ("LIAR".equals(winnerType)) {
             gameEndData.put("reason", "mission_success");
             if (room.getCurrentRound() >= room.getRoundLimit()) {
-                gameEndData.put("message", String.format("🎭 라이어 %s님이 승리했습니다!\n끝까지 정체를 숨기는데 성공했습니다.", liar != null ? liar.getNickname() : ""));
+                gameEndData.put("message", String.format("🎭 라이어 [%s]님이 승리했습니다!\n끝까지 정체를 숨기는데 성공했습니다.", liar != null ? liar.getNickname() : ""));
             } else {
-                gameEndData.put("message", String.format("🎭 라이어 %s님이 승리했습니다!\n시민 수가 부족해 승리했습니다.", liar != null ? liar.getNickname() : ""));
+                gameEndData.put("message", String.format("🎭 라이어 [%s]님이 승리했습니다!\n시민 수가 부족해 승리했습니다.", liar != null ? liar.getNickname() : ""));
             }
         } else {
             gameEndData.put("reason", "citizens_victory");
-            gameEndData.put("message", String.format("🎉 시민팀이 승리했습니다!\n라이어 %s님을 성공적으로 찾아냈습니다.", liar != null ? liar.getNickname() : ""));
+            gameEndData.put("message", String.format("🎉 시민팀이 승리했습니다!\n라이어 [%s]님을 성공적으로 찾아냈습니다.", liar != null ? liar.getNickname() : ""));
         }
 
         // 모든 플레이어에게 브로드캐스트
         GameMessage broadcastMessage = GameMessage.of("GAME_END", room.getCode(), gameEndData);
         messagingTemplate.convertAndSend("/topic/rooms/" + room.getCode(), broadcastMessage);
-        
-        logAudit(room.getRoomId(), null, "GAME_ENDED", 
+
+        logAudit(room.getRoomId(), null, "GAME_ENDED",
                 String.format("winner: %s, liar: %s", winnerType, liar != null ? liar.getNickname() : "Unknown"));
     }
     

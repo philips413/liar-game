@@ -744,109 +744,132 @@ function showGameEndPhase(data) {
 
 // 게임 승리자 팝업 표시
 function showWinnerModal(data) {
-    console.log('=== 승리자 팝업 표시 ===', data);
+    console.log('=== showWinnerModal 함수 시작 ===');
+    console.log('받은 데이터:', data);
+    console.log('document.readyState:', document.readyState);
 
     // DOM이 완전히 로드될 때까지 대기
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => showWinnerModal(data));
+        console.log('DOM 로딩 중 - DOMContentLoaded 이벤트 대기');
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOMContentLoaded 이벤트 발생 - showWinnerModal 재시도');
+            showWinnerModal(data);
+        });
         return;
     }
 
-    // 모든 기존 모달 닫기
+    console.log('DOM 로딩 완료 - 모달 표시 진행');
+
+    // 모든 기존 모달 닫기 (숨김 처리)
+    console.log('기존 모달 숨김 처리...');
     hideAllModals();
 
-    // 모달 요소 접근을 위한 더 긴 대기시간과 재시도 로직
-    let retryCount = 0;
-    const maxRetries = 10;
+    // 짧은 지연 후 모달 표시 시도
+    console.log('100ms 후 tryShowWinnerModal 호출 예약');
+    setTimeout(() => {
+        console.log('tryShowWinnerModal 호출 시작');
+        tryShowWinnerModal(data);
+    }, 100);
 
-    function tryShowModal() {
-        const modal = document.getElementById('game-winner-modal');
-        if (!modal) {
-            console.error('game-winner-modal 요소를 찾을 수 없습니다! 재시도:', retryCount + 1);
-            retryCount++;
-            if (retryCount < maxRetries) {
-                setTimeout(tryShowModal, 200);
-                return;
-            } else {
-                // 최대 재시도 후에도 실패하면 대체 알림 표시
-                alert('게임이 종료되었습니다!\n' + (data.message || '승부 결과를 확인할 수 없습니다.'));
-                return;
-            }
-        }
+    console.log('=== showWinnerModal 함수 종료 ===');
+}
 
-        const modalContent = modal.querySelector('.modal-content.winner-modal');
-        if (!modalContent) {
-            console.error('winner-modal 요소를 찾을 수 없습니다!');
-            return;
-        }
+// 승리자 모달 표시 시도 함수
+function tryShowWinnerModal(data) {
+    console.log('=== tryShowWinnerModal 시작 ===', data);
+    console.log('승리자 모달 DOM 요소 검색...');
 
-        const title = document.getElementById('winner-title');
-        const icon = document.getElementById('winner-icon');
-        const message = document.getElementById('winner-message');
-        const details = document.getElementById('winner-details');
-        const rolesList = document.getElementById('roles-list');
+    // 모든 모달 요소 검색 시도
+    const allModals = document.querySelectorAll('[id*="modal"]');
+    console.log('페이지에서 찾은 모달 요소들:', Array.from(allModals).map(m => m.id));
 
-        // 필수 요소들이 없으면 오류 로그 출력
-        if (!title || !icon || !message || !details || !rolesList) {
-            console.error('승리자 모달의 필수 요소들을 찾을 수 없습니다:', {
-                title: !!title,
-                icon: !!icon,
-                message: !!message,
-                details: !!details,
-                rolesList: !!rolesList
-            });
-            return;
-        }
+    const modal = document.querySelector("#game-winner-modal");
+    console.log('game-winner-modal 요소:', modal);
 
-        // 승리자에 따른 테마 설정
-        if (data.winner === 'LIAR' || data.reason === 'mission_success') {
-            modalContent.classList.remove('citizen-victory');
-            modalContent.classList.add('liar-victory');
-            title.textContent = '🎭 라이어 승리!';
-            icon.textContent = '🎭';
-            message.textContent = '라이어가 승리했습니다!';
-            details.textContent = data.message || '라이어가 마지막까지 정체를 숨기는데 성공했습니다!';
-        } else if (data.winner === 'CITIZENS' || data.reason === 'citizens_victory') {
-            modalContent.classList.remove('liar-victory');
-            modalContent.classList.add('citizen-victory');
-            title.textContent = '🎉 시민 승리!';
-            icon.textContent = '🎉';
-            message.textContent = '시민팀이 승리했습니다!';
-            details.textContent = data.message || '시민들이 라이어를 성공적으로 찾아냈습니다!';
-        } else {
-            // 기본값
-            modalContent.classList.remove('liar-victory', 'citizen-victory');
-            title.textContent = '🏁 게임 종료';
-            icon.textContent = '🏁';
-            message.textContent = '게임이 종료되었습니다!';
-            details.textContent = data.message || '모든 라운드가 완료되었습니다.';
-        }
+    if (!modal) {
+        console.error('game-winner-modal 요소를 찾을 수 없습니다!');
+        console.log('document.body:', document.body);
+        console.log('document.getElementById("game-winner-modal"):', document.getElementById("game-winner-modal"));
 
-        // 플레이어 역할 공개
-        if (data.players && Array.isArray(data.players)) {
-            rolesList.innerHTML = data.players.map(player => `
-                <div class="role-reveal-item">
-                    <span class="role-reveal-name">${player.nickname}</span>
-                    <span class="role-reveal-badge ${player.role.toLowerCase()}">
-                        ${player.role === 'LIAR' ? '라이어' : '시민'}
-                    </span>
-                </div>
-            `).join('');
-        } else {
-            rolesList.innerHTML = '<p>역할 정보를 불러올 수 없습니다.</p>';
-        }
-
-        // 모달 표시
-        modal.classList.remove('hidden');
-
-        // 10초 카운트다운 시작
-        startWinnerModalCountdown();
-
-        console.log('승리자 팝업 표시 완료');
+        // 대체 승리자 팝업을 동적으로 생성
+        showAlternativeWinnerPopup(data);
+        return;
     }
 
-    // 첫 번째 시도
-    setTimeout(tryShowModal, 100);
+    console.log('game-winner-modal 요소 찾음:', modal);
+
+    const modalContent = modal.querySelector('.modal-content.winner-modal');
+    if (!modalContent) {
+        console.error('winner-modal 요소를 찾을 수 없습니다!');
+        alert('게임이 종료되었습니다!\n' + (data.message || '승부 결과를 확인할 수 없습니다.'));
+        setTimeout(() => returnToWaitingRoom(), 1000);
+        return;
+    }
+
+    const title = document.getElementById('winner-title');
+    const icon = document.getElementById('winner-icon');
+    const message = document.getElementById('winner-message');
+    const details = document.getElementById('winner-details');
+    const rolesList = document.getElementById('roles-list');
+
+    // 필수 요소들이 없으면 오류 로그 출력 후 대체 알림
+    if (!title || !icon || !message || !details || !rolesList) {
+        console.error('승리자 모달의 필수 요소들을 찾을 수 없습니다:', {
+            title: !!title,
+            icon: !!icon,
+            message: !!message,
+            details: !!details,
+            rolesList: !!rolesList
+        });
+        alert('게임이 종료되었습니다!\n' + (data.message || '승부 결과를 확인할 수 없습니다.'));
+        setTimeout(() => returnToWaitingRoom(), 1000);
+        return;
+    }
+
+    // 승리자에 따른 테마 설정
+    if (data.winner === 'LIAR' || data.reason === 'mission_success') {
+        modalContent.classList.remove('citizen-victory');
+        modalContent.classList.add('liar-victory');
+        title.textContent = '🎭 라이어 승리!';
+        icon.textContent = '🎭';
+        message.textContent = '라이어가 승리했습니다!';
+        details.textContent = data.message || '라이어가 마지막까지 정체를 숨기는데 성공했습니다!';
+    } else if (data.winner === 'CITIZENS' || data.reason === 'citizens_victory') {
+        modalContent.classList.remove('liar-victory');
+        modalContent.classList.add('citizen-victory');
+        title.textContent = '🎉 시민 승리!';
+        icon.textContent = '🎉';
+        message.textContent = '시민팀이 승리했습니다!';
+        details.textContent = data.message || '시민들이 라이어를 성공적으로 찾아냈습니다!';
+    } else {
+        // 기본값
+        modalContent.classList.remove('liar-victory', 'citizen-victory');
+        title.textContent = '🏁 게임 종료';
+        icon.textContent = '🏁';
+        message.textContent = '게임이 종료되었습니다!';
+        details.textContent = data.message || '모든 라운드가 완료되었습니다.';
+    }
+
+    // 플레이어 역할 공개
+    if (data.players && Array.isArray(data.players)) {
+        rolesList.innerHTML = data.players.map(player => `
+            <div class="role-reveal-item">
+                <span class="role-reveal-name">${player.nickname}</span>
+                <span class="role-reveal-badge ${player.role.toLowerCase()}">
+                    ${player.role === 'LIAR' ? '라이어' : '시민'}
+                </span>
+            </div>
+        `).join('');
+    } else {
+        rolesList.innerHTML = '<p>역할 정보를 불러올 수 없습니다.</p>';
+    }
+
+    // 모달 표시
+    modal.classList.remove('hidden');
+    console.log('승리자 모달 표시 완료');
+
+    // 10초 카운트다운 시작
+    startWinnerModalCountdown();
 }
 
 // 승리자 모달 카운트다운 변수
@@ -879,9 +902,9 @@ function startWinnerModalCountdown() {
     }, 1000);
 }
 
-// 승리자 팝업 닫기 및 대기실 이동
+// 승리자 팝업 닫기 및 새로운 방으로 이동
 function closeWinnerModalAndRedirect() {
-    console.log('=== 승리자 팝업 닫기 및 대기실 이동 ===');
+    console.log('=== 승리자 팝업 닫기 및 새로운 방으로 이동 ===');
     const modal = document.getElementById('game-winner-modal');
     if (modal) {
         modal.classList.add('hidden');
@@ -894,16 +917,224 @@ function closeWinnerModalAndRedirect() {
         winnerCountdownTimer = null;
     }
 
-    // 대기실로 이동
+    // 메인화면으로 이동
     setTimeout(() => {
-        returnToWaitingRoom();
+        goToMainScreen();
     }, 300);
+}
+
+// [DEPRECATED] 새로운 방으로 이동하거나 대기실로 이동 - 더 이상 사용하지 않음
+// 게임 종료 시 메인화면으로 이동하도록 변경됨 (goToMainScreen 사용)
+function moveToNewRoomOrWaitingRoom() {
+    console.log('[DEPRECATED] moveToNewRoomOrWaitingRoom 호출됨 - goToMainScreen으로 변경 필요');
+    // 메인화면으로 이동
+    goToMainScreen();
 }
 
 // 게임 승리자 팝업 닫기 (확인 버튼 클릭 시)
 function closeWinnerModal() {
     console.log('=== 사용자가 확인 버튼 클릭 ===');
     closeWinnerModalAndRedirect();
+}
+
+// 메인화면으로 이동
+function goToMainScreen() {
+    console.log('메인화면으로 이동');
+
+    // WebSocket 연결 해제
+    if (AppState.stompClient && AppState.isConnected) {
+        AppState.stompClient.disconnect();
+        AppState.isConnected = false;
+    }
+
+    // 게임 상태 초기화
+    AppState.gameState = null;
+    AppState.gamePhase = null;
+    AppState.roomInfo = {
+        code: null,
+        maxPlayers: 6,
+        roundLimit: 3,
+        currentRound: 1,
+        state: null
+    };
+    AppState.playerInfo = {
+        id: null,
+        nickname: null,
+        isHost: false,
+        role: null,
+        cardWord: null
+    };
+    AppState.newRoomCode = null;
+    AppState.playerIdMapping = null;
+    AppState.players = [];
+    AppState.currentModal = null;
+    AppState.finalDefenseCompleted = false;
+
+    // 호스트 액션 버튼 모두 제거
+    if (typeof clearHostActionButtons === 'function') {
+        clearHostActionButtons();
+    }
+
+    // 모든 모달 닫기
+    hideAllModals();
+
+    // 입력 필드들 초기화
+    const hostNicknameInput = document.getElementById('host-nickname');
+    const playerNicknameInput = document.getElementById('player-nickname');
+    const roomCodeInput = document.getElementById('room-code');
+
+    if (hostNicknameInput) hostNicknameInput.value = '';
+    if (playerNicknameInput) playerNicknameInput.value = '';
+    if (roomCodeInput) roomCodeInput.value = '';
+
+    // 메인 화면 표시
+    if (typeof showScreen === 'function') {
+        showScreen('main-screen');
+    } else {
+        // 페이지 새로고침으로 메인 화면으로 이동
+        window.location.reload();
+    }
+
+    console.log('메인화면 이동 완료 - 새로운 게임을 만들 수 있습니다');
+}
+
+// 테스트용 승리자 팝업 함수 (전역 접근 가능)
+function testWinnerModal() {
+    const testData = {
+        winner: "CITIZENS",
+        message: "🎉 시민팀이 승리했습니다!",
+        liarName: "테스트 라이어",
+        players: [
+            { playerId: 1, nickname: "플레이어1", role: "CITIZEN" },
+            { playerId: 2, nickname: "테스트 라이어", role: "LIAR" }
+        ]
+    };
+    console.log('테스트 승리자 팝업 호출...');
+    showWinnerModal(testData);
+}
+
+// 전역 접근을 위해 window 객체에 등록
+window.testWinnerModal = testWinnerModal;
+
+// 대체 팝업 테스트 함수
+function testAlternativePopup() {
+    const testData = {
+        winner: "LIAR",
+        message: "🎭 라이어가 승리했습니다!",
+        liarName: "테스트 라이어",
+        players: [
+            { playerId: 1, nickname: "플레이어1", role: "CITIZEN" },
+            { playerId: 2, nickname: "테스트 라이어", role: "LIAR" }
+        ]
+    };
+    console.log('대체 승리자 팝업 직접 호출...');
+    showAlternativeWinnerPopup(testData);
+}
+
+// 전역 접근을 위해 window 객체에 등록
+window.testAlternativePopup = testAlternativePopup;
+
+// 대체 승리자 팝업 (HTML이 없을 때 사용)
+function showAlternativeWinnerPopup(data) {
+    console.log('대체 승리자 팝업 생성 중...', data);
+
+    // 기존 대체 팝업이 있으면 제거
+    const existingPopup = document.getElementById('alternative-winner-popup');
+    if (existingPopup) {
+        existingPopup.remove();
+    }
+
+    // 동적으로 팝업 생성
+    const popup = document.createElement('div');
+    popup.id = 'alternative-winner-popup';
+    popup.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    `;
+
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    `;
+
+    // 승리자 정보 구성
+    const winnerIcon = data.winner === 'LIAR' ? '🎭' : '🎉';
+    const message = data.message || '게임이 종료되었습니다!';
+
+    content.innerHTML = `
+        <div style="font-size: 48px; margin-bottom: 20px;">${winnerIcon}</div>
+        <h2 style="margin: 0 0 20px 0; color: #333;">게임 종료</h2>
+        <p style="font-size: 18px; margin: 0 0 20px 0; line-height: 1.4;">${message}</p>
+        <div style="margin: 20px 0;">
+            <h4 style="margin: 0 0 10px 0;">🎭 역할 공개</h4>
+            <div id="players-roles-list" style="text-align: left; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+        <button id="close-alternative-popup" style="
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        ">확인 (메인화면으로)</button>
+    `;
+
+    // 플레이어 역할 목록 추가
+    const rolesList = content.querySelector('#players-roles-list');
+    if (data.players && rolesList) {
+        data.players.forEach(player => {
+            const roleItem = document.createElement('div');
+            roleItem.style.cssText = 'padding: 5px 0; border-bottom: 1px solid #eee;';
+            const roleIcon = player.role === 'LIAR' ? '🎭' : '👤';
+            const roleName = player.role === 'LIAR' ? '라이어' : '시민';
+            roleItem.innerHTML = `${roleIcon} ${player.nickname} - ${roleName}`;
+            rolesList.appendChild(roleItem);
+        });
+    }
+
+    popup.appendChild(content);
+    document.body.appendChild(popup);
+
+    // 확인 버튼 이벤트
+    const closeBtn = content.querySelector('#close-alternative-popup');
+    closeBtn.addEventListener('click', () => {
+        console.log('대체 팝업 닫기 - 메인화면으로 이동');
+        popup.remove();
+        setTimeout(() => {
+            goToMainScreen();
+        }, 300);
+    });
+
+    // ESC 키로 닫기
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            popup.remove();
+            document.removeEventListener('keydown', handleEscape);
+            setTimeout(() => {
+                goToMainScreen();
+            }, 300);
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
+
+    console.log('대체 승리자 팝업 생성 완료');
 }
 
 // 최종 투표 결과 팝업 표시
@@ -919,118 +1150,16 @@ function showFinalResultModal(data) {
     // 모든 기존 모달 닫기
     hideAllModals();
 
-    // 모달 요소 접근을 위한 재시도 로직
-    let retryCount = 0;
-    const maxRetries = 10;
-
-    function tryShowFinalResultModal() {
-        const modal = document.getElementById('final-result-modal');
-        if (!modal) {
-            console.error('final-result-modal 요소를 찾을 수 없습니다! 재시도:', retryCount + 1);
-            retryCount++;
-            if (retryCount < maxRetries) {
-                setTimeout(tryShowFinalResultModal, 200);
-                return;
-            } else {
-                console.error('최대 재시도 후에도 final-result-modal을 찾을 수 없습니다.');
-                return;
-            }
-        }
-
-        const modalContent = modal.querySelector('.modal-content.final-result-modal');
-        if (!modalContent) {
-            console.error('final-result-modal 요소를 찾을 수 없습니다!');
-            return;
-        }
-
-        const title = document.getElementById('final-result-title');
-        const icon = document.getElementById('result-icon');
-        const message = document.getElementById('result-message');
-        const details = document.getElementById('result-details');
-        const nextAction = document.getElementById('next-action');
-
-        // 필수 요소들이 없으면 오류 로그 출력
-        if (!title || !icon || !message || !details || !nextAction) {
-            console.error('최종 결과 모달의 필수 요소들을 찾을 수 없습니다:', {
-                title: !!title,
-                icon: !!icon,
-                message: !!message,
-                details: !!details,
-                nextAction: !!nextAction
-            });
-            return;
-        }
-
-        // 결과에 따른 테마 설정
-        if (data.outcome === 'eliminated') {
-            modalContent.classList.remove('survived');
-            modalContent.classList.add('eliminated');
-            title.textContent = '💀 사망 결정';
-            icon.textContent = '💀';
-            message.textContent = `${data.eliminatedName || '플레이어'}가 사망했습니다!`;
-            details.textContent = '플레이어가 제거되어 게임에서 퇴장합니다.';
-            nextAction.textContent = '라운드가 계속 진행됩니다...';
-        } else if (data.outcome === 'survived') {
-            modalContent.classList.remove('eliminated');
-            modalContent.classList.add('survived');
-            title.textContent = '🛡️ 생존 결정';
-            icon.textContent = '🛡️';
-            message.textContent = `${data.survivorName || '플레이어'}가 생존했습니다!`;
-            details.textContent = '플레이어가 계속해서 게임에 참여합니다.';
-            nextAction.textContent = '라운드가 계속 진행됩니다...';
-        } else {
-            // 기본값
-            modalContent.classList.remove('eliminated', 'survived');
-            title.textContent = '⚖️ 투표 결과';
-            icon.textContent = '⚖️';
-            message.textContent = '투표가 완료되었습니다!';
-            details.textContent = data.message || '결과가 결정되었습니다.';
-            nextAction.textContent = '게임이 계속됩니다...';
-        }
-
-        // 모달 표시
-        modal.classList.remove('hidden');
-
-        console.log('최종 투표 결과 팝업 표시 완료');
-    }
-
-    // 첫 번째 시도
-    setTimeout(tryShowFinalResultModal, 100);
 }
 
 // 최종 투표 결과 팝업 닫기
 function closeFinalResultModal() {
     console.log('=== 최종 투표 결과 팝업 닫기 ===');
-    const modal = document.getElementById('final-result-modal');
+    const modal = document.querySelector("#final-result-modal");
     if (modal) {
         modal.classList.add('hidden');
         console.log('최종 투표 결과 팝업 닫기 완료');
     }
-}
-
-// 폼 유효성 검사
-function validateForm(formId) {
-    const form = document.getElementById(formId);
-    const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
-    
-    for (let input of inputs) {
-        if (!input.value.trim()) {
-            input.focus();
-            return false;
-        }
-    }
-    return true;
-}
-
-// 입력 필드 초기화
-function resetForm(formId) {
-    const form = document.getElementById(formId);
-    form.reset();
-    
-    // 에러 스타일 제거
-    form.querySelectorAll('.error').forEach(el => {
-        el.classList.remove('error');
-    });
 }
 
 // 텍스트 입력 제한
@@ -1070,70 +1199,6 @@ function limitTextInput(inputId, maxLength, counterId) {
             submitBtn.disabled = currentLength === 0;
         }
     });
-}
-
-// 애니메이션 효과
-function animateElement(elementId, animationClass, duration = 1000) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.classList.add(animationClass);
-        setTimeout(() => {
-            element.classList.remove(animationClass);
-        }, duration);
-    }
-}
-
-// 성공/오류 메시지 스타일링
-function showNotificationWithStyle(message, type = 'info') {
-    const messageElement = document.getElementById('notification-message');
-    messageElement.textContent = message;
-    
-    const modal = document.getElementById('notification-modal');
-    modal.classList.remove('success', 'error', 'warning');
-    modal.classList.add(type);
-    
-    showModal('notification-modal');
-}
-
-// 로딩 상태 표시
-function setLoadingState(buttonId, loading = true) {
-    const button = document.getElementById(buttonId);
-    if (button) {
-        if (loading) {
-            button.disabled = true;
-            button.textContent = '처리 중...';
-        } else {
-            button.disabled = false;
-            button.textContent = button.getAttribute('data-original-text') || '확인';
-        }
-    }
-}
-
-// 게임 중단 모달 표시
-function showGameInterruptedModal(message, playerName) {
-    console.log('게임 중단 모달 표시:', message, playerName);
-    
-    // 기존 모달들 숨기기
-    hideAllModals();
-    
-    // 게임 중단 모달 내용 설정
-    const modal = document.getElementById('notification-modal');
-    const messageElement = document.getElementById('notification-message');
-    
-    if (modal && messageElement) {
-        messageElement.textContent = message;
-        modal.classList.remove('success', 'error', 'warning');
-        modal.classList.add('warning');
-        showModal('notification-modal');
-        
-        // 3초 후 자동으로 모달 닫기
-        setTimeout(() => {
-            hideModal('notification-modal');
-        }, 3000);
-    } else {
-        // 모달이 없으면 alert 사용
-        alert(message);
-    }
 }
 
 // 채팅 메시지 추가 함수
@@ -1590,9 +1655,21 @@ function clearHostActionButtons() {
     if (!AppState.playerInfo.isHost) {
         return;
     }
-    
+
     const actionsArea = document.getElementById('host-actions-area');
     if (actionsArea) {
         actionsArea.innerHTML = '';
+    }
+}
+
+// 채팅방 초기화 함수
+function clearChatMessages() {
+    console.log('채팅방 초기화 중...');
+    const chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        chatMessages.innerHTML = '';
+        console.log('채팅방 초기화 완료');
+    } else {
+        console.warn('chat-messages 요소를 찾을 수 없습니다');
     }
 }

@@ -510,9 +510,57 @@ function showLoading(show) {
 }
 
 // 알림 표시
-function showNotification(message) {
-    document.getElementById('notification-message').textContent = message;
-    showModal('notification-modal');
+function showNotification(message, type = 'info') {
+    showToast(message, type);
+}
+
+// 토스트 알림 시스템
+function showToast(message, type = 'info', duration = 4000) {
+    const container = document.getElementById('toast-container');
+    if (!container) {
+        console.error('토스트 컨테이너를 찾을 수 없습니다.');
+        return;
+    }
+
+    // 토스트 요소 생성
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    // 토스트 내용 설정
+    toast.innerHTML = `
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="closeToast(this.parentElement)">&times;</button>
+    `;
+
+    // 컨테이너에 추가
+    container.appendChild(toast);
+
+    // 애니메이션 시작
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    // 자동 제거
+    setTimeout(() => {
+        closeToast(toast);
+    }, duration);
+
+    return toast;
+}
+
+// 토스트 닫기
+function closeToast(toast) {
+    if (!toast || !toast.parentElement) return;
+
+    toast.classList.add('hide');
+    toast.classList.remove('show');
+
+    // 애니메이션 후 제거
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.parentElement.removeChild(toast);
+        }
+    }, 300);
 }
 
 // 에러 핸들링
@@ -631,7 +679,7 @@ function showCopySuccess(button, copiedText) {
     console.log('복사된 내용:', copiedText);
     
     // 성공 알림
-    showNotification('방 코드와 링크가 클립보드에 복사되었습니다!');
+    showNotification('방 코드와 링크가 클립보드에 복사되었습니다!', 'success');
     
     // 3초 후 원래 상태로 복원
     setTimeout(() => {
