@@ -82,6 +82,30 @@
             </div>
         </div>
 
+        <!-- 간소화된 직접 참가 화면 -->
+        <div id="direct-join-screen" class="screen hidden">
+            <div class="container">
+                <h2>🎭 라이어 게임 참가</h2>
+                <div class="room-info-display">
+                    <p class="join-message">초대받은 방에 참가합니다</p>
+                    <div class="room-code-display">
+                        <span class="label">방 코드:</span>
+                        <span id="direct-room-code" class="room-code"></span>
+                    </div>
+                </div>
+                <form id="direct-join-form">
+                    <div class="form-group">
+                        <label for="direct-player-nickname">닉네임을 입력하세요</label>
+                        <input type="text" id="direct-player-nickname" maxlength="20" placeholder="닉네임" required autofocus>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary btn-large">게임 참가하기</button>
+                        <button type="button" id="direct-join-cancel-btn" class="btn btn-secondary">취소</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- 대기실 화면 -->
         <div id="waiting-room-screen" class="screen hidden">
             <div class="container">
@@ -89,9 +113,11 @@
                 <div class="room-info">
                     <div class="room-code-section">
                         <p>방 코드: <span id="waiting-room-code" class="room-code"></span></p>
-                        <button id="copy-room-code-btn" class="btn btn-copy" title="방 코드 복사">
-                            📋 복사
-                        </button>
+                        <div class="room-actions">
+                            <button id="share-room-link-btn" class="btn btn-share" title="방 링크 공유">
+                                🔗 링크 공유
+                            </button>
+                        </div>
                     </div>
                     <p>내 닉네임: <span id="my-nickname" class="nickname"></span></p>
                 </div>

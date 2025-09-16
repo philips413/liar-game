@@ -34,7 +34,17 @@ document.addEventListener('DOMContentLoaded', function() {
 // 앱 초기화
 function initializeApp() {
     console.log('라이어 게임 앱 초기화 시작');
-    showScreen('main-screen');
+
+    // URL 파라미터 확인
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomCode = urlParams.get('room');
+
+    if (roomCode) {
+        // 방 코드가 있으면 간소화된 참가 화면 표시
+        showDirectJoinScreen(roomCode);
+    } else {
+        showScreen('main-screen');
+    }
 }
 
 // 이벤트 리스너 바인딩
@@ -57,6 +67,14 @@ function bindEventListeners() {
     // 방 참가
     document.getElementById('join-room-form').addEventListener('submit', handleJoinRoom);
     document.getElementById('join-back-btn').addEventListener('click', () => {
+        showScreen('main-screen');
+    });
+
+    // 직접 참가
+    document.getElementById('direct-join-form').addEventListener('submit', handleDirectJoinRoom);
+    document.getElementById('direct-join-cancel-btn').addEventListener('click', () => {
+        // URL 파라미터 제거하고 메인 화면으로
+        window.history.replaceState({}, document.title, window.location.pathname);
         showScreen('main-screen');
     });
 
@@ -90,9 +108,9 @@ function bindGameEventListeners() {
     // 게임 종료 후
     document.getElementById('new-game-btn').addEventListener('click', handleNewGame);
     document.getElementById('exit-game-btn').addEventListener('click', handleExitGame);
-    
-    // 방 코드 복사 버튼
-    document.getElementById('copy-room-code-btn').addEventListener('click', handleCopyRoomCode);
+
+    // 방 링크 공유 버튼
+    document.getElementById('share-room-link-btn').addEventListener('click', handleShareRoomLink);
 }
 
 // 모달 이벤트 리스너
@@ -253,6 +271,101 @@ async function handleCreateRoom(event) {
         showWaitingRoom();
         
     } catch (error) {
+        showNotification(error.message);
+    } finally {
+        showLoading(false);
+    }
+}
+
+// 간소화된 직접 참가 화면 표시
+function showDirectJoinScreen(roomCode) {
+    console.log('직접 참가 화면 표시:', roomCode);
+
+    // 방 코드 표시
+    document.getElementById('direct-room-code').textContent = roomCode.toUpperCase();
+
+    // 화면 전환
+    showScreen('direct-join-screen');
+
+    // 입력 필드에 포커스
+    setTimeout(() => {
+        const nicknameInput = document.getElementById('direct-player-nickname');
+        if (nicknameInput) {
+            nicknameInput.focus();
+        }
+    }, 100);
+}
+
+// 직접 참가 처리
+async function handleDirectJoinRoom(event) {
+    event.preventDefault();
+
+    const roomCode = document.getElementById('direct-room-code').textContent.trim();
+    const nickname = document.getElementById('direct-player-nickname').value.trim();
+
+    if (!nickname) {
+        showNotification('닉네임을 입력해주세요.');
+        return;
+    }
+
+    showLoading(true);
+
+    try {
+        // 방 참가 API 호출
+        const joinResponse = await fetch(`/api/rooms/${roomCode}/join`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                nickname: nickname
+            })
+        });
+
+        if (!joinResponse.ok) {
+            let errorMessage = '방 참가에 실패했습니다.';
+
+            try {
+                const errorData = await joinResponse.json();
+                if (errorData.error) {
+                    errorMessage = errorData.error;
+                } else if (errorData.message) {
+                    errorMessage = errorData.message;
+                }
+            } catch (parseError) {
+                // JSON 파싱 실패시 상태 코드별 기본 메시지
+                if (joinResponse.status === 404) {
+                    errorMessage = '존재하지 않는 방입니다.';
+                } else if (joinResponse.status === 400) {
+                    errorMessage = '방 참가 조건을 확인해주세요.';
+                }
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        const joinData = await joinResponse.json();
+
+        // 상태 업데이트
+        AppState.playerInfo.id = joinData.playerId;
+        AppState.playerInfo.nickname = nickname;
+        AppState.playerInfo.isHost = joinData.isHost || false;
+        AppState.roomInfo.code = roomCode;
+
+        console.log('직접 참가 완료 - 호스트 상태:', AppState.playerInfo.isHost);
+        console.log('플레이어 정보:', AppState.playerInfo);
+
+        // URL 파라미터 제거
+        window.history.replaceState({}, document.title, window.location.pathname);
+
+        // WebSocket 연결
+        await connectWebSocket();
+
+        // 대기실로 이동
+        showWaitingRoom();
+
+    } catch (error) {
+        console.error('직접 참가 오류:', error);
         showNotification(error.message);
     } finally {
         showLoading(false);
@@ -633,35 +746,6 @@ window.addEventListener('beforeunload', function(event) {
     }
 });
 
-// 방 코드 복사 기능
-function handleCopyRoomCode() {
-    const roomCode = AppState.roomInfo.code;
-    const copyBtn = document.getElementById('copy-room-code-btn');
-    
-    if (!roomCode) {
-        showNotification('복사할 방 코드가 없습니다.');
-        return;
-    }
-    
-    // 현재 URL + 방 코드로 공유 링크 생성
-    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
-    const shareText = `라이어 게임에 참여하세요!\n방 코드: ${roomCode}\n링크: ${shareUrl}`;
-    
-    // 클립보드 복사 시도
-    if (navigator.clipboard && window.isSecureContext) {
-        // 최신 방법 (HTTPS 환경)
-        navigator.clipboard.writeText(shareText).then(() => {
-            showCopySuccess(copyBtn, shareText);
-        }).catch(err => {
-            console.warn('클립보드 복사 실패:', err);
-            fallbackCopyToClipboard(shareText, copyBtn);
-        });
-    } else {
-        // 폴백 방법
-        fallbackCopyToClipboard(shareText, copyBtn);
-    }
-}
-
 // 복사 성공 피드백
 function showCopySuccess(button, copiedText) {
     const originalText = button.innerHTML;
@@ -712,6 +796,164 @@ function fallbackCopyToClipboard(text, button) {
         showManualCopyModal(text);
     } finally {
         document.body.removeChild(textArea);
+    }
+}
+
+// 방 링크 공유 기능
+function handleShareRoomLink() {
+    const roomCode = AppState.roomInfo.code;
+    const shareBtn = document.getElementById('share-room-link-btn');
+
+    if (!roomCode) {
+        showNotification('공유할 방 코드가 없습니다.');
+        return;
+    }
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
+    const shareTitle = '라이어 게임 초대';
+    const shareText = `라이어 게임에 참여하세요!\n방 코드: ${roomCode}`;
+
+    // Web Share API 지원 확인 (모바일 브라우저)
+    if (navigator.share && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        navigator.share({
+            title: shareTitle,
+            text: shareText,
+            url: shareUrl
+        }).then(() => {
+            showShareSuccess(shareBtn);
+        }).catch((error) => {
+            console.warn('네이티브 공유 실패:', error);
+            fallbackShare(shareUrl, shareText, shareBtn);
+        });
+    } else {
+        // 데스크탑이나 Web Share API 미지원시 폴백
+        fallbackShare(shareUrl, shareText, shareBtn);
+    }
+}
+
+// 폴백 공유 방법
+function fallbackShare(shareUrl, shareText, button) {
+    // 클립보드에 링크 복사
+    const fullShareText = `${shareText}\n링크: ${shareUrl}`;
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            showShareSuccess(button, '링크가 클립보드에 복사되었습니다!');
+        }).catch(err => {
+            console.warn('클립보드 복사 실패:', err);
+            showShareModal(shareUrl, shareText);
+        });
+    } else {
+        showShareModal(shareUrl, shareText);
+    }
+}
+
+// 공유 성공 피드백
+function showShareSuccess(button, message = '링크가 공유되었습니다!') {
+    const originalText = button.innerHTML;
+
+    // 버튼 상태 변경
+    button.classList.add('shared');
+    button.innerHTML = '✅ 공유완료!';
+
+    // 모바일 진동 피드백
+    if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+    }
+
+    // 성공 알림
+    showNotification(message, 'success');
+
+    // 3초 후 원래 상태로 복원
+    setTimeout(() => {
+        button.classList.remove('shared');
+        button.innerHTML = originalText;
+    }, 3000);
+}
+
+// 공유 모달 표시
+function showShareModal(shareUrl, shareText) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay share-modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-content share-modal-content">
+            <div class="modal-header">
+                <h3>🔗 방 링크 공유</h3>
+            </div>
+            <div class="modal-body">
+                <p class="share-instruction">아래 링크를 복사해서 친구들에게 공유하세요:</p>
+                <div class="share-url-container">
+                    <input type="text" class="share-url-input" value="${shareUrl}" readonly>
+                    <button class="btn btn-copy-link" onclick="copyShareUrl(this)">복사</button>
+                </div>
+                <div class="share-text-preview">
+                    <p><strong>메시지 템플릿:</strong></p>
+                    <div class="share-template">${shareText}\n링크: ${shareUrl}</div>
+                </div>
+                <div class="share-options">
+                    <h4>다른 방법으로 공유:</h4>
+                    <div class="share-buttons">
+                        <button onclick="shareToKakao('${shareUrl}', '${shareText}')" class="btn btn-kakao">카카오톡</button>
+                        <button onclick="shareToLine('${shareUrl}', '${shareText}')" class="btn btn-line">라인</button>
+                        <button onclick="shareToSMS('${shareUrl}', '${shareText}')" class="btn btn-sms">문자</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeShareModal()" class="btn btn-secondary">닫기</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // URL 입력 필드 자동 선택
+    const urlInput = modal.querySelector('.share-url-input');
+    urlInput.focus();
+    urlInput.select();
+}
+
+// 공유 URL 복사
+function copyShareUrl(button) {
+    const input = button.parentElement.querySelector('.share-url-input');
+    input.select();
+    input.setSelectionRange(0, 99999); // 모바일 대응
+
+    try {
+        document.execCommand('copy');
+        button.innerHTML = '✅ 복사됨!';
+        showNotification('링크가 복사되었습니다!', 'success');
+        setTimeout(() => {
+            button.innerHTML = '복사';
+        }, 2000);
+    } catch (err) {
+        showNotification('복사에 실패했습니다. 수동으로 복사해주세요.', 'error');
+    }
+}
+
+// 외부 앱으로 공유
+function shareToKakao(url, text) {
+    // 카카오톡 공유는 실제 앱이 필요하므로 URL 복사로 대체
+    copyShareUrl(document.querySelector('.btn-copy-link'));
+    showNotification('링크를 복사했습니다. 카카오톡에서 붙여넣기 하세요.', 'info');
+}
+
+function shareToLine(url, text) {
+    const lineUrl = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+    window.open(lineUrl, '_blank');
+}
+
+function shareToSMS(url, text) {
+    const smsUrl = `sms:?body=${encodeURIComponent(text + '\n' + url)}`;
+    window.location.href = smsUrl;
+}
+
+// 공유 모달 닫기
+function closeShareModal() {
+    const modal = document.querySelector('.share-modal');
+    if (modal) {
+        modal.remove();
     }
 }
 
