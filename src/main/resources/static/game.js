@@ -160,7 +160,9 @@ function handlePlayerJoined(data) {
         AppState.players.push(player);
     }
     
-    updatePlayersList();
+    if (typeof updatePlayersList === 'function') {
+        updatePlayersList();
+    }
 }
 
 // 플레이어 퇴장 처리
@@ -174,7 +176,9 @@ function handlePlayerLeft(data) {
     }
     
     AppState.players = AppState.players.filter(p => p.playerId !== player.playerId);
-    updatePlayersList();
+    if (typeof updatePlayersList === 'function') {
+        updatePlayersList();
+    }
     addSystemMessage(`${player.nickname}님이 방을 나갔습니다.`, 'info');
 }
 
@@ -272,17 +276,36 @@ function handleDescriptionPhaseStarted(data) {
 function handleRoundStateUpdate(data) {
     const gameData = data.data || data;
     console.log('라운드 상태 업데이트:', gameData);
-    
+
     AppState.gamePhase = gameData.state;
-    
+
     if (gameData.currentRound) {
         AppState.roomInfo.currentRound = gameData.currentRound;
+    }
+
+    // 새 라운드 READY 상태인 경우 최후진술 완료 플래그 초기화
+    if (gameData.state === 'READY') {
+        console.log('READY 상태 감지 - 이전 finalDefenseCompleted:', AppState.finalDefenseCompleted);
+        AppState.finalDefenseCompleted = false;
+        console.log('READY 상태 - 최후진술 완료 플래그 초기화 완료:', AppState.finalDefenseCompleted);
+
+        // 메시지가 있으면 채팅창에 표시
+        if (gameData.data?.message) {
+            addChatMessage('시스템', gameData.data.message);
+        }
+    }
+
+    // 추가 안전장치: 라운드가 변경되었을 때도 플래그 초기화
+    if (gameData.currentRound && gameData.currentRound > 1 && AppState.finalDefenseCompleted) {
+        console.log('라운드 변경 감지 - 이전 finalDefenseCompleted:', AppState.finalDefenseCompleted);
+        AppState.finalDefenseCompleted = false;
+        console.log('라운드 변경 - 최후진술 완료 플래그 강제 초기화:', AppState.finalDefenseCompleted);
     }
 
     // 설명 단계인 경우 모든 플레이어의 입력 필드 활성화
     if (gameData.state === 'DESC') {
         // 메시지가 있으면 채팅창에 표시
-        if (gameData.data.message) {
+        if (gameData.data?.message) {
             addChatMessage('시스템', gameData.data.message);
         }
     }
@@ -322,6 +345,15 @@ function handleVoteResult(data) {
 
     // 최후진술 투표 결과가 아닌 경우에만 지목자가 있으면 최후진술 팝업 자동 표시
     const isFinalVote = gameData.isFinalVote || gameData.eliminatedId || gameData.outcome === 'eliminated' || gameData.outcome === 'survived';
+
+    console.log('최후진술 팝업 조건 확인:', {
+        isFinalVote: isFinalVote,
+        finalDefenseCompleted: AppState.finalDefenseCompleted,
+        accusedName: gameData.accusedName,
+        accusedId: gameData.accusedId,
+        myPlayerId: AppState.playerInfo.id,
+        currentRound: AppState.roomInfo.currentRound
+    });
 
     // 추가 안전 장치: 최후진술이 이미 완료된 경우에도 팝업 차단
     if (!isFinalVote && !AppState.finalDefenseCompleted && gameData.accusedName && gameData.accusedId) {
@@ -593,7 +625,9 @@ function updateRoomState(roomState) {
             console.warn('내 플레이어 정보를 찾을 수 없습니다. playerId:', AppState.playerInfo.id);
         }
         
+        if (typeof updatePlayersList === 'function') {
         updatePlayersList();
+    }
 
         // 강제 버튼 업데이트
         setTimeout(() => {
@@ -1576,7 +1610,9 @@ function updatePlayerAliveStatus(playerId, isAlive) {
 
     // 플레이어 목록 UI 업데이트 (있는 경우)
     if (typeof updatePlayersList === 'function') {
+        if (typeof updatePlayersList === 'function') {
         updatePlayersList();
+    }
     }
 }
 

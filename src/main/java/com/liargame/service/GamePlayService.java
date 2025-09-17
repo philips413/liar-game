@@ -713,11 +713,16 @@ public class GamePlayService {
         
         roundRepository.save(round);
         
-        logAudit(room.getRoomId(), null, "ROUND_STARTED", 
+        logAudit(room.getRoomId(), null, "ROUND_STARTED",
                 String.format("round: %d", roundIdx));
-        
+
+        // 다음 라운드 시작 메시지 브로드캐스트 (finalDefenseCompleted 플래그 초기화용)
+        GameMessage nextRoundMessage = GameMessage.of("NEXT_ROUND_START", room.getCode(),
+                Map.of("currentRound", roundIdx, "message", String.format("%d라운드가 시작되었습니다!", roundIdx)));
+        messagingTemplate.convertAndSend("/topic/rooms/" + room.getCode(), nextRoundMessage);
+
         // 새 라운드 시작 알림
-        broadcastRoundStateChange(room.getCode(), "READY", 
+        broadcastRoundStateChange(room.getCode(), "READY",
                 Map.of("message", String.format("%d라운드가 시작되었습니다! 호스트가 설명 단계를 시작할 때까지 기다려주세요.", roundIdx)));
     }
     
