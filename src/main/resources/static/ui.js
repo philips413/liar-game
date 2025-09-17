@@ -1754,3 +1754,180 @@ function resetGameUI() {
 
     console.log('게임 UI 완전 초기화 완료');
 }
+
+// ===== 사망한 플레이어 검은 스크린 관리 =====
+
+// 사망한 플레이어용 검은 스크린 표시
+function showDeadPlayerOverlay() {
+    console.log('=== 사망한 플레이어 검은 스크린 표시 ===');
+
+    const overlay = document.getElementById('dead-player-overlay');
+    if (!overlay) {
+        console.error('dead-player-overlay 요소를 찾을 수 없습니다');
+        return;
+    }
+
+    // 모든 기존 모달과 UI 요소 숨김
+    hideAllModals();
+    hideAllGamePhases();
+
+    // 검은 스크린 표시
+    overlay.classList.remove('hidden');
+
+    // 모든 인터랙션 비활성화
+    disableAllInteractions();
+
+    console.log('사망한 플레이어 검은 스크린 표시 완료');
+}
+
+// 사망한 플레이어용 검은 스크린 숨김
+function hideDeadPlayerOverlay() {
+    console.log('=== 사망한 플레이어 검은 스크린 숨김 ===');
+
+    const overlay = document.getElementById('dead-player-overlay');
+    if (!overlay) {
+        console.error('dead-player-overlay 요소를 찾을 수 없습니다');
+        return;
+    }
+
+    overlay.classList.add('hidden');
+
+    // 인터랙션 재활성화
+    enableAllInteractions();
+
+    console.log('사망한 플레이어 검은 스크린 숨김 완료');
+}
+
+// 사망한 플레이어인지 확인
+function isDeadPlayer() {
+    // AppState에서 현재 플레이어의 생존 상태 확인
+    if (!AppState.playerInfo || !AppState.playerInfo.id) {
+        console.log('플레이어 정보가 없음');
+        return false;
+    }
+
+    // 플레이어 목록에서 현재 플레이어 찾기
+    const currentPlayer = AppState.players.find(p => p.playerId === AppState.playerInfo.id);
+    if (!currentPlayer) {
+        console.log('현재 플레이어를 목록에서 찾을 수 없음:', AppState.playerInfo.id);
+        return false;
+    }
+
+    console.log('현재 플레이어 상태:', currentPlayer);
+    console.log('isAlive 값:', currentPlayer.isAlive);
+    console.log('alive 값:', currentPlayer.alive);
+
+    // 사망 상태 확인 (isAlive 필드가 false이면 사망)
+    // 백엔드 필드명과 일치하도록 isAlive 우선 확인, alive는 백업용
+    const isDead = (currentPlayer.isAlive === false) || (currentPlayer.alive === false);
+    console.log('사망 여부:', isDead);
+
+    return isDead;
+}
+
+// 모든 인터랙션 비활성화 (사망한 플레이어용)
+function disableAllInteractions() {
+    console.log('모든 인터랙션 비활성화 중...');
+
+    // 1. 모든 버튼 비활성화
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add('dead-player-disabled');
+    });
+
+    // 2. 모든 입력 필드 비활성화
+    const inputs = document.querySelectorAll('input, textarea, select');
+    inputs.forEach(input => {
+        input.disabled = true;
+        input.classList.add('dead-player-disabled');
+    });
+
+    // 3. 투표 카드 비활성화
+    const voteCards = document.querySelectorAll('.vote-player-card');
+    voteCards.forEach(card => {
+        card.style.pointerEvents = 'none';
+        card.style.opacity = '0.5';
+        card.classList.add('dead-player-disabled');
+    });
+
+    // 4. 설명 입력 비활성화
+    const descriptionInput = document.getElementById('description-input');
+    if (descriptionInput) {
+        descriptionInput.disabled = true;
+        descriptionInput.placeholder = '사망한 플레이어는 설명을 작성할 수 없습니다';
+    }
+
+    // 5. 설명 제출 버튼 비활성화
+    const submitBtn = document.getElementById('submit-description-btn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '참여 불가';
+    }
+
+    console.log('모든 인터랙션 비활성화 완료');
+}
+
+// 모든 인터랙션 재활성화 (생존한 플레이어용)
+function enableAllInteractions() {
+    console.log('모든 인터랙션 재활성화 중...');
+
+    // 1. 비활성화된 버튼들 재활성화
+    const buttons = document.querySelectorAll('button.dead-player-disabled');
+    buttons.forEach(btn => {
+        btn.disabled = false;
+        btn.classList.remove('dead-player-disabled');
+    });
+
+    // 2. 비활성화된 입력 필드들 재활성화
+    const inputs = document.querySelectorAll('input.dead-player-disabled, textarea.dead-player-disabled, select.dead-player-disabled');
+    inputs.forEach(input => {
+        input.disabled = false;
+        input.classList.remove('dead-player-disabled');
+    });
+
+    // 3. 투표 카드 재활성화
+    const voteCards = document.querySelectorAll('.vote-player-card.dead-player-disabled');
+    voteCards.forEach(card => {
+        card.style.pointerEvents = '';
+        card.style.opacity = '';
+        card.classList.remove('dead-player-disabled');
+    });
+
+    // 4. 설명 입력 재활성화
+    const descriptionInput = document.getElementById('description-input');
+    if (descriptionInput) {
+        descriptionInput.disabled = false;
+        descriptionInput.placeholder = '받은 단어에 대해 설명해주세요...';
+    }
+
+    // 5. 설명 제출 버튼 재활성화
+    const submitBtn = document.getElementById('submit-description-btn');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '단어 설명';
+    }
+
+    console.log('모든 인터랙션 재활성화 완료');
+}
+
+// 플레이어 생존 상태 업데이트 시 검은 스크린 처리
+function handlePlayerDeathStateChange() {
+    console.log('플레이어 생존 상태 변경 처리 중...');
+
+    if (isDeadPlayer()) {
+        console.log('현재 플레이어가 사망 상태 - 검은 스크린 표시');
+        showDeadPlayerOverlay();
+    } else {
+        console.log('현재 플레이어가 생존 상태 - 검은 스크린 숨김');
+        hideDeadPlayerOverlay();
+    }
+}
+
+// 플레이어 상태 변경 감지를 위한 헬퍼 함수
+function checkAndUpdateDeadPlayerStatus() {
+    // 게임이 진행 중일 때만 확인
+    if (AppState.gameState && AppState.gameState.state === 'ROUND') {
+        handlePlayerDeathStateChange();
+    }
+}

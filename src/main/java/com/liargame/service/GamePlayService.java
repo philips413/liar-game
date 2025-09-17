@@ -305,6 +305,14 @@ public class GamePlayService {
                 eliminateVotes, surviveVotes, finalVoteResult.get("message"));
         broadcastChatMessage(room.getCode(), "시스템", chatMessage);
 
+        // 플레이어 상태가 변경된 경우 방 상태 업데이트 브로드캐스트
+        if (eliminateVotes > surviveVotes) {
+            // 플레이어가 사망했으므로 방 상태 업데이트를 브로드캐스트하여 프론트엔드에서 사망 처리
+            gameRoomService.broadcastRoomStateUpdate(room.getCode());
+            log.info("플레이어 사망으로 인한 방 상태 업데이트 브로드캐스트: roomCode={}, eliminatedPlayer={}",
+                    room.getCode(), accused.getNickname());
+        }
+
         // 라운드 종료 처리
         completeCurrentRound(room, currentRound);
     }
@@ -344,19 +352,17 @@ public class GamePlayService {
     }
 
     private void completeCurrentRound(GameRoom room, Round currentRound) {
+        // 라운드를 완료 상태로 마킹만 수행 (자동 진행은 프론트엔드에서 처리)
+        markRoundAsCompleted(room, currentRound);
+    }
+
+    private void markRoundAsCompleted(GameRoom room, Round currentRound) {
         currentRound.setState(Round.RoundState.END);
         currentRound.setEndedAt(LocalDateTime.now());
         roundRepository.save(currentRound);
 
-        // 다음 라운드 시작 또는 게임 종료
-        if (room.getCurrentRound() < room.getRoundLimit()) {
-            proceedToNextRound(room);
-        } else {
-            // 모든 라운드 완료 - 라이어가 끝까지 생존
-            Player liar = playerRepository.findByRoomAndRole(room, Player.PlayerRole.LIAR)
-                    .orElse(null);
-            endGameWithResult(room, "LIAR", liar);
-        }
+        log.info("라운드 완료 마킹: roomCode={}, round={}, state={}",
+                room.getCode(), currentRound.getIdx(), currentRound.getState());
     }
     
     private void validateVoteState(Round round, boolean isFinalVote) {
@@ -853,23 +859,31 @@ public class GamePlayService {
     public void proceedNextRound(String roomCode, Long hostId) {
         GameRoom room = gameRoomRepository.findByCode(roomCode)
                 .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다"));
-        
+
         Player host = playerRepository.findById(hostId)
                 .orElseThrow(() -> new RuntimeException("플레이어를 찾을 수 없습니다"));
-        
+
         if (!host.getIsHost()) {
             throw new RuntimeException("호스트만 다음 라운드를 진행할 수 있습니다");
         }
-        
+
         Round currentRound = roundRepository.findByRoomCodeAndIdx(roomCode, room.getCurrentRound())
                 .orElseThrow(() -> new RuntimeException("현재 라운드를 찾을 수 없습니다"));
-        
+
         if (currentRound.getState() != Round.RoundState.END) {
             throw new RuntimeException("라운드가 완료되지 않았습니다");
         }
-        
-        proceedToNextRound(room);
-        
+
+        // 다음 라운드 시작 또는 게임 종료 처리
+        if (room.getCurrentRound() < room.getRoundLimit()) {
+            proceedToNextRound(room);
+        } else {
+            // 모든 라운드 완료 - 라이어가 끝까지 생존하여 승리
+            Player liar = playerRepository.findByRoomAndRole(room, Player.PlayerRole.LIAR)
+                    .orElse(null);
+            endGameWithResult(room, "LIAR", liar);
+        }
+
         logAudit(room.getRoomId(), hostId, "PROCEED_NEXT_ROUND", "Host proceeded to next round");
     }
     
@@ -900,10 +914,13 @@ public class GamePlayService {
         List<Player> alivePlayers = playerRepository.findAlivePlayersByRoomCode(room.getCode());
         
         // 현재 라운드에서 설명을 제출한 플레이어 수 확인
-        long descriptionsCount = messageLogRepository.countByRoomIdAndRoundAndType(
-                room.getRoomId(), round, MessageLog.MessageType.DESC);
-        
-        log.info("설명 완료 확인: 생존자 {}명, 설명 제출 {}개", alivePlayers.size(), descriptionsCount);
+        long descriptionsCount = messageLogRepository.findByRoomIdAndRoundAndType(room.getRoomId(), round, MessageLog.MessageType.DESC)
+            .stream()
+            .map(MessageLog::getPlayer)
+            .distinct()
+            .count();
+
+      log.info("설명 완료 확인: 생존자 {}명, 설명 제출 {}개", alivePlayers.size(), descriptionsCount);
         
         // 모든 생존 플레이어가 설명을 제출했는지 확인
         if (descriptionsCount >= alivePlayers.size()) {

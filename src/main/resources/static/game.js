@@ -281,20 +281,6 @@ function handleRoundStateUpdate(data) {
 
     // 설명 단계인 경우 모든 플레이어의 입력 필드 활성화
     if (gameData.state === 'DESC') {
-        const descInput = document.getElementById('description-input');
-        const submitBtn = document.getElementById('submit-description-btn');
-
-        if (descInput) {
-            descInput.disabled = false;
-        }
-
-        if (submitBtn) {
-            // 추가 설명 허용 시 제출 상태 초기화
-            submitBtn.dataset.submitted = 'false';
-            submitBtn.disabled = false;
-            submitBtn.textContent = '단어 설명';
-        }
-
         // 메시지가 있으면 채팅창에 표시
         if (gameData.data.message) {
             addChatMessage('시스템', gameData.data.message);
@@ -312,11 +298,10 @@ function handleAllDescriptionsComplete(data) {
     
     // 모든 플레이어의 설명이 완료되었음을 호스트에게 알림
     if (AppState.playerInfo.isHost) {
-        addHostStatusMessage('모든 플레이어의 설명이 완료되었습니다.\n한번 더 작성하시겠습니까?', 'info');
+        addHostStatusMessage('모든 플레이어의 설명이 완료되었습니다.', 'info');
         
         // 호스트 컨트롤 영역에 버튼 표시
         setHostActionButtons([
-            { text: '허용하기', action: handleAllowMoreDescriptions, type: 'success' },
             { text: '투표하기', action: handleStartVoting, type: 'primary' }
         ]);
     }
@@ -365,6 +350,16 @@ function handleVoteResult(data) {
             accusedName: gameData.accusedName,
             accusedId: gameData.accusedId
         });
+
+        // 과반수 득표자가 없어서 다음 라운드로 진행하는 경우 메시지 표시
+        if (!gameData.accusedName && !gameData.accusedId && !isFinalVote) {
+            const phaseInfo = document.getElementById('phase-info');
+            if (phaseInfo && !gameData.willGameEnd) {
+                phaseInfo.textContent = '과반수 득표자가 없습니다. 3초 후 자동으로 다음 라운드가 시작됩니다...';
+            } else if (phaseInfo && gameData.willGameEnd) {
+                phaseInfo.textContent = '과반수 득표자가 없습니다. 게임이 곧 종료됩니다.';
+            }
+        }
     }
 }
 
@@ -398,15 +393,48 @@ function handleFinalVoteResult(data) {
             }, 100);
         }
 
+        // 플레이어 생존 상태 업데이트 (필요한 경우)
+        if (gameData.eliminatedId && gameData.outcome === 'eliminated') {
+            console.log('플레이어 사망 처리:', gameData.eliminatedId);
+            updatePlayerAliveStatus(gameData.eliminatedId, false);
+        }
+
+        // 사망한 플레이어에게 검은 스크린 표시 확인
+        setTimeout(() => {
+            // if (typeof checkAndUpdateDeadPlayerStatus === 'function') {
+            //     checkAndUpdateDeadPlayerStatus();
+            // }
+            checkAndUpdateDeadPlayerStatus();
+        }, 100);
+
         // 모든 플레이어에게 최종 투표 결과 팝업 표시
         setTimeout(() => {
             showFinalResultModal(gameData);
         }, 300);
 
-        // 모든 플레이어에게 라운드 완료 메시지 표시
-        const phaseInfo = document.getElementById('phase-info');
-        if (phaseInfo) {
-            phaseInfo.textContent = '라운드 완료 - 호스트가 다음 라운드를 진행할 때까지 기다려주세요.';
+        // 게임이 끝나지 않는 경우 자동으로 다음 라운드 진행
+        if (!gameData.willGameEnd) {
+            console.log('게임이 계속됨 - 3초 후 자동으로 다음 라운드 진행');
+
+            // 모든 플레이어에게 자동 진행 안내 메시지 표시
+            const phaseInfo = document.getElementById('phase-info');
+            if (phaseInfo) {
+                phaseInfo.textContent = '라운드 완료 - 3초 후 자동으로 다음 라운드가 시작됩니다...';
+            }
+
+            // 호스트인 경우 3초 후 자동으로 다음 라운드 진행
+            if (AppState.playerInfo.isHost) {
+                setTimeout(() => {
+                    console.log('자동으로 다음 라운드 진행 중...');
+                    handleProceedNextRound();
+                }, 3000);
+            }
+        } else {
+            // 게임이 끝나는 경우 기존 메시지 표시
+            const phaseInfo = document.getElementById('phase-info');
+            if (phaseInfo) {
+                phaseInfo.textContent = '라운드 완료 - 게임이 곧 종료됩니다.';
+            }
         }
 
         console.log('라운드 완료 - 모든 팝업 및 관련 UI 제거됨');
@@ -575,6 +603,13 @@ function updateRoomState(roomState) {
         // WebSocket 세션 등록 (연결되어 있고 플레이어 정보가 있는 경우)
         registerWebSocketSession();
 
+        // 사망한 플레이어 상태 확인 및 오버레이 표시
+        setTimeout(() => {
+            if (typeof checkAndUpdateDeadPlayerStatus === 'function') {
+                checkAndUpdateDeadPlayerStatus();
+            }
+        }, 100);
+
         // 게임이 진행 중이면 게임 화면으로 이동
         if (roomState.state === 'ROUND') {
             showGameScreen();
@@ -659,10 +694,10 @@ async function handleSubmitDescription() {
         addChatMessage(AppState.playerInfo.nickname, descriptionText, true);
         
         // 입력 필드 및 버튼 비활성화
-        descInput.disabled = true;
-        submitBtn.disabled = true;
-        submitBtn.dataset.submitted = 'true';
-        submitBtn.textContent = '제출 완료';
+        // descInput.disabled = true;
+        // submitBtn.disabled = true;
+        // submitBtn.dataset.submitted = 'true';
+        // submitBtn.textContent = '제출 완료';
         
         // 입력 필드 초기화
         descInput.value = '';
@@ -679,30 +714,30 @@ async function handleSubmitDescription() {
 }
 
 // 추가 설명 허용 (호스트)
-async function handleAllowMoreDescriptions() {
-    if (!AppState.playerInfo.isHost) {
-        showNotification('호스트만 추가 설명을 허용할 수 있습니다.');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/actions/allow-more-descriptions?hostId=${AppState.playerInfo.id}`, {
-            method: 'POST'
-        });
-        
-        if (!response.ok) {
-            throw new Error('추가 설명 허용에 실패했습니다.');
-        }
-        
-        // 호스트 액션 버튼 제거
-        clearHostActionButtons();
-        
-        
-    } catch (error) {
-        console.error('추가 설명 허용 오류:', error);
-        showNotification(error.message);
-    }
-}
+// async function handleAllowMoreDescriptions() {
+//     if (!AppState.playerInfo.isHost) {
+//         showNotification('호스트만 추가 설명을 허용할 수 있습니다.');
+//         return;
+//     }
+//
+//     try {
+//         const response = await fetch(`/api/rooms/${AppState.roomInfo.code}/actions/allow-more-descriptions?hostId=${AppState.playerInfo.id}`, {
+//             method: 'POST'
+//         });
+//
+//         if (!response.ok) {
+//             throw new Error('추가 설명 허용에 실패했습니다.');
+//         }
+//
+//         // 호스트 액션 버튼 제거
+//         clearHostActionButtons();
+//
+//
+//     } catch (error) {
+//         console.error('추가 설명 허용 오류:', error);
+//         showNotification(error.message);
+//     }
+// }
 
 // 투표 시작 (호스트)
 async function handleStartVoting() {
@@ -1207,11 +1242,12 @@ function displayVoteResultInHostPanel(gameData) {
         // 최후진술 투표 완료 후 처리
         addHostStatusMessage('라운드가 완료되었습니다.', 'success');
 
-        // 게임이 종료되지 않는 경우에만 다음 라운드 진행 버튼 표시
+        // 게임 진행 상태에 따른 호스트 패널 처리
         console.log('최후진술 투표 완료 - willGameEnd:', gameData.willGameEnd);
         if (!gameData.willGameEnd) {
-            console.log('게임이 계속 진행됨 - 다음 라운드 진행 버튼 표시');
-            setHostActionButton('➡️ 다음 라운드 진행', handleProceedNextRound);
+            console.log('게임이 계속 진행됨 - 자동으로 다음 라운드 진행');
+            addHostStatusMessage('3초 후 자동으로 다음 라운드가 시작됩니다.', 'info');
+            clearHostActionButtons(); // 자동 진행이므로 버튼 제거
         } else {
             // 게임이 종료되는 경우 버튼 표시하지 않음
             console.log('게임이 종료됨 - 다음 라운드 진행 버튼 숨김');
@@ -1248,11 +1284,18 @@ function displayVoteResultInHostPanel(gameData) {
         } else {
             addHostStatusMessage('과반수 득표자가 없어 다음 라운드로 진행합니다.', 'info');
 
-            // 게임이 종료되지 않는 경우에만 다음 라운드 진행 버튼 표시
+            // 게임 진행 상태에 따른 처리
             console.log('일반 투표 완료 - willGameEnd:', gameData.willGameEnd);
             if (!gameData.willGameEnd) {
-                console.log('게임이 계속 진행됨 - 다음 라운드 진행 버튼 표시');
-                setHostActionButton('➡️ 다음 라운드 진행', handleProceedNextRound);
+                console.log('게임이 계속 진행됨 - 3초 후 자동으로 다음 라운드 진행');
+                addHostStatusMessage('3초 후 자동으로 다음 라운드가 시작됩니다.', 'info');
+                clearHostActionButtons(); // 자동 진행이므로 버튼 제거
+
+                // 3초 후 자동으로 다음 라운드 진행
+                setTimeout(() => {
+                    console.log('자동으로 다음 라운드 진행 중... (과반수 득표자 없음)');
+                    handleProceedNextRound();
+                }, 3000);
             } else {
                 // 게임이 종료되는 경우 버튼 표시하지 않음
                 console.log('게임이 종료됨 - 다음 라운드 진행 버튼 숨김');
@@ -1507,6 +1550,34 @@ function addCombinedSystemMessage(message, messageType = 'info') {
 
     // 스크롤을 최하단으로 이동
     chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// 플레이어 생존 상태 업데이트
+function updatePlayerAliveStatus(playerId, isAlive) {
+    console.log(`플레이어 생존 상태 업데이트: ID=${playerId}, isAlive=${isAlive}`);
+
+    if (!AppState.players || !Array.isArray(AppState.players)) {
+        console.warn('플레이어 목록이 없습니다');
+        return;
+    }
+
+    // 플레이어 목록에서 해당 플레이어 찾기
+    const playerIndex = AppState.players.findIndex(p => p.playerId === playerId);
+    if (playerIndex === -1) {
+        console.warn('해당 플레이어를 찾을 수 없습니다:', playerId);
+        return;
+    }
+
+    // 플레이어 생존 상태 업데이트 (두 필드 모두 업데이트)
+    AppState.players[playerIndex].alive = isAlive;
+    AppState.players[playerIndex].isAlive = isAlive;
+
+    console.log(`플레이어 ${AppState.players[playerIndex].nickname} 생존 상태 업데이트: ${isAlive}`);
+
+    // 플레이어 목록 UI 업데이트 (있는 경우)
+    if (typeof updatePlayersList === 'function') {
+        updatePlayersList();
+    }
 }
 
 

@@ -2580,3 +2580,210 @@ textarea {
   }
 }
 
+/* ===== 사망한 플레이어 검은 스크린 오버레이 ===== */
+
+.dead-player-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: calc(var(--z-modal) + 500);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  animation: deadOverlayAppear 1s ease-out;
+  pointer-events: all;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+.dead-player-overlay.hidden {
+  display: none;
+}
+
+@keyframes deadOverlayAppear {
+  0% {
+    opacity: 0;
+    background: rgba(0, 0, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.95);
+  }
+}
+
+.dead-player-content {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  padding: var(--space-2xl);
+  max-width: 500px;
+  position: relative;
+}
+
+.dead-player-icon {
+  font-size: 5rem;
+  margin-bottom: var(--space-xl);
+  opacity: 0.7;
+  animation: deadIconFloat 3s ease-in-out infinite;
+}
+
+@keyframes deadIconFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-10px) scale(1.02);
+    opacity: 0.5;
+  }
+}
+
+.dead-player-title {
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  margin-bottom: var(--space-lg);
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  animation: deadTitlePulse 2s ease-in-out infinite;
+}
+
+@keyframes deadTitlePulse {
+  0%, 100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.01);
+  }
+}
+
+.dead-player-message {
+  font-size: var(--text-lg);
+  line-height: 1.6;
+  margin-bottom: var(--space-xl);
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.dead-player-restriction {
+  background: rgba(255, 0, 0, 0.1);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  font-size: var(--text-base);
+  color: rgba(255, 100, 100, 0.9);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+}
+
+.dead-player-restriction::before {
+  content: '⚠️';
+  font-size: var(--text-xl);
+  margin-right: var(--space-sm);
+}
+
+.dead-watching-info {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  font-size: var(--text-base);
+  color: rgba(255, 255, 255, 0.6);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+}
+
+.dead-watching-info::before {
+  content: '👁️';
+  font-size: var(--text-lg);
+  margin-right: var(--space-sm);
+}
+
+/* 사망 상태 시 모든 인터랙션 차단 */
+.dead-player-overlay * {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+/* 애니메이션 비활성화 사용자를 위한 대체 */
+@media (prefers-reduced-motion: reduce) {
+  .dead-player-overlay {
+    animation: none;
+  }
+
+  .dead-player-icon,
+  .dead-player-title {
+    animation: none;
+    transform: none;
+    opacity: 0.8;
+  }
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .dead-player-content {
+    padding: var(--space-xl);
+    max-width: 90%;
+  }
+
+  .dead-player-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-lg);
+  }
+
+  .dead-player-title {
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-md);
+  }
+
+  .dead-player-message {
+    font-size: var(--text-base);
+    margin-bottom: var(--space-lg);
+  }
+
+  .dead-player-restriction,
+  .dead-watching-info {
+    padding: var(--space-md);
+    font-size: var(--text-sm);
+  }
+}
+
+/* 가로 모드 최적화 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .dead-player-content {
+    padding: var(--space-md);
+  }
+
+  .dead-player-icon {
+    font-size: 3rem;
+    margin-bottom: var(--space-sm);
+  }
+
+  .dead-player-title {
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-sm);
+  }
+
+  .dead-player-message {
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .dead-player-restriction,
+  .dead-watching-info {
+    padding: var(--space-sm);
+    font-size: var(--text-xs);
+  }
+}
+
