@@ -3,6 +3,7 @@ package com.liargame.service;
 import com.liargame.domain.dto.*;
 import com.liargame.domain.entity.*;
 import com.liargame.domain.repository.*;
+import com.liargame.config.WebSocketConfig;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import com.liargame.websocket.GameMessage;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class GameRoomService {
     private final MessageLogRepository messageLogRepository;
     private final AuditLogRepository auditLogRepository;
     private final SimpMessageSendingOperations messagingTemplate;
+    private final WebSocketConfig webSocketConfig;
     
     public String createRoom(RoomCreateRequest request) {
         String roomCode = generateRoomCode();
@@ -541,7 +543,7 @@ public class GameRoomService {
     
     private void broadcastGameInterrupted(String roomCode, Player leftPlayer) {
         Map<String, Object> interruptData = Map.of(
-                "message", "플레이어의 연결이 원활하지 않아 게임을 진행할수 없습니다. 대기실로 이동합니다.",
+                "message", "플레이어의 연결이 원활하지 않아 게임을 진행할수 없습니다. 메인화면으로 이동합니다.",
                 "leftPlayer", Map.of(
                         "playerId", leftPlayer.getPlayerId(),
                         "nickname", leftPlayer.getNickname()

@@ -3,11 +3,13 @@ package com.liargame.websocket;
 import com.liargame.domain.entity.Player;
 import com.liargame.domain.repository.PlayerRepository;
 import com.liargame.service.GamePlayService;
+import com.liargame.config.WebSocketConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Controller;
 
@@ -21,7 +23,26 @@ public class GameWebSocketController {
     private final GamePlayService gamePlayService;
     private final PlayerRepository playerRepository;
     private final SimpMessageSendingOperations messagingTemplate;
-    
+    private final WebSocketConfig webSocketConfig;
+
+    @MessageMapping("/rooms/{roomCode}/register")
+    public void handleSessionRegister(@DestinationVariable String roomCode,
+                                    @Payload Map<String, Object> message,
+                                    SimpMessageHeaderAccessor headerAccessor) {
+        try {
+            Long playerId = Long.valueOf(message.get("playerId").toString());
+            String sessionId = headerAccessor.getSessionId();
+
+            if (sessionId != null) {
+                webSocketConfig.registerSessionPlayer(sessionId, roomCode, playerId);
+                log.info("세션 등록 성공: 방 {}, 플레이어 ID {}, 세션 {}", roomCode, playerId, sessionId);
+            }
+
+        } catch (Exception e) {
+            log.error("세션 등록 실패: {}", e.getMessage(), e);
+        }
+    }
+
     @MessageMapping("/rooms/{roomCode}/desc")
     public void handleDescription(@DestinationVariable String roomCode, @Payload Map<String, Object> message) {
         try {

@@ -33,10 +33,13 @@ async function connectWebSocket() {
                     clearTimeout(connectionTimeout);
                     console.log('WebSocket 연결 성공: ' + frame);
                     AppState.isConnected = true;
-                    
+
                     // 방 토픽 구독
                     subscribeToRoom();
-                    
+
+                    // 세션 등록 (플레이어 정보가 있는 경우)
+                    registerWebSocketSession();
+
                     resolve();
                 },
                 function(error) {
@@ -498,17 +501,17 @@ function handleGameEnd(data) {
 // 게임 중단 처리
 function handleGameInterrupted(data) {
     console.log('게임 중단:', data);
-    
+
     const leftPlayer = data.data?.leftPlayer;
     const playerName = leftPlayer ? leftPlayer.nickname : '한 플레이어';
-    const message = data.data?.message || `${playerName}가 나가서 게임을 진행할 수 없습니다. 대기실로 이동합니다.`;
-    
+    const message = data.data?.message || `${playerName}가 나가서 게임을 진행할 수 없습니다. 메인화면으로 이동합니다.`;
+
     // 모달 창으로 게임 중단 메시지 표시
     showGameInterruptedModal(message, playerName);
-    
-    // 게임 상태 초기화하고 대기실로 이동
+
+    // 게임 상태 초기화하고 메인화면으로 이동
     setTimeout(() => {
-        returnToWaitingRoom();
+        returnToMainScreen();
     }, 3000);
 }
 
@@ -527,13 +530,13 @@ function showGameInterruptedModal(message, playerName) {
                 </p>
                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                     <p style="font-size: 14px; color: #6c757d; margin: 0;">
-                        잠시 후 자동으로 대기실로 이동합니다...
+                        잠시 후 자동으로 메인화면으로 이동합니다...
                     </p>
                 </div>
-                <button onclick="hideGameInterruptedModal(); returnToWaitingRoom();" 
-                        class="modal-btn primary-btn" 
+                <button onclick="hideGameInterruptedModal(); returnToMainScreen();"
+                        class="modal-btn primary-btn"
                         style="width: 100%; padding: 12px;">
-                    대기실로 이동
+                    메인화면으로 이동
                 </button>
             </div>
         </div>
@@ -563,12 +566,15 @@ function updateRoomState(roomState) {
         }
         
         updatePlayersList();
-        
+
         // 강제 버튼 업데이트
         setTimeout(() => {
             forceUpdateStartGameButton();
         }, 50);
-        
+
+        // WebSocket 세션 등록 (연결되어 있고 플레이어 정보가 있는 경우)
+        registerWebSocketSession();
+
         // 게임이 진행 중이면 게임 화면으로 이동
         if (roomState.state === 'ROUND') {
             showGameScreen();
@@ -1074,6 +1080,46 @@ function returnToWaitingRoom() {
     showWaitingRoom();
 }
 
+// 메인화면으로 이동
+function returnToMainScreen() {
+    console.log('메인화면으로 이동 중...');
+
+    // WebSocket 연결 해제
+    if (AppState.stompClient && AppState.isConnected) {
+        AppState.stompClient.disconnect();
+        AppState.isConnected = false;
+        console.log('WebSocket 연결 해제');
+    }
+
+    // 앱 상태 완전 초기화
+    AppState.roomInfo = null;
+    AppState.playerInfo = null;
+    AppState.players = [];
+    AppState.gameState = null;
+    AppState.gamePhase = null;
+    AppState.currentModal = null;
+    AppState.stompClient = null;
+
+    // 모든 모달 닫기
+    hideAllModals();
+
+    // 메인화면으로 이동 (app.js의 showScreen 함수 사용)
+    if (typeof showScreen === 'function') {
+        showScreen('main-screen');
+    } else {
+        // 대체 방법: 직접 화면 전환
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.classList.add('hidden');
+        });
+        const mainScreen = document.getElementById('main-screen');
+        if (mainScreen) {
+            mainScreen.classList.remove('hidden');
+        }
+    }
+
+    console.log('메인화면으로 이동 완료');
+}
+
 // 새 게임 시작
 async function handleNewGame() {
     returnToWaitingRoom();
@@ -1246,6 +1292,25 @@ function disconnectWebSocket() {
         AppState.stompClient.disconnect();
         AppState.isConnected = false;
         console.log('WebSocket 연결 해제');
+    }
+}
+
+// WebSocket 세션 등록
+function registerWebSocketSession() {
+    if (AppState.stompClient && AppState.isConnected && AppState.roomInfo && AppState.playerInfo) {
+        try {
+            const message = {
+                playerId: AppState.playerInfo.id
+            };
+
+            AppState.stompClient.send(`/app/rooms/${AppState.roomInfo.code}/register`, {}, JSON.stringify(message));
+            console.log('WebSocket 세션 등록 요청 전송:', {
+                roomCode: AppState.roomInfo.code,
+                playerId: AppState.playerInfo.id
+            });
+        } catch (error) {
+            console.error('WebSocket 세션 등록 실패:', error);
+        }
     }
 }
 
