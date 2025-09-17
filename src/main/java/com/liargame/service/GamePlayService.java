@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -333,6 +334,25 @@ public class GamePlayService {
         if (room.getCurrentRound() >= room.getRoundLimit()) {
             log.info("마지막 라운드에 도달하여 게임 종료: currentRound={}, roundLimit={}",
                     room.getCurrentRound(), room.getRoundLimit());
+
+            // 라이어가 끝까지 살아남아서 승리
+            Player liar = playerRepository.findByRoomAndRole(room, Player.PlayerRole.LIAR)
+                    .orElse(null);
+
+            log.info("라이어가 마지막 라운드까지 생존하여 승리: liar={}",
+                    liar != null ? liar.getNickname() : "Unknown");
+
+            // 지연된 게임 종료 처리 (다른 로직 완료 후 실행)
+            CompletableFuture.runAsync(() -> {
+                try {
+                    Thread.sleep(1000); // 1초 지연
+                    endGameWithResult(room, "LIAR", liar);
+                } catch (InterruptedException e) {
+                    log.error("게임 종료 지연 처리 중 오류", e);
+                    Thread.currentThread().interrupt();
+                }
+            });
+
             return true;
         }
 

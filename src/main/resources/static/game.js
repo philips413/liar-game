@@ -535,24 +535,31 @@ function handleGameEnd(data) {
         console.warn('resetGameUI 함수를 찾을 수 없습니다');
     }
 
-    // 항상 대체 팝업을 사용하여 확실히 표시
-    console.log('대체 승리자 팝업 직접 호출...');
-    if (typeof showAlternativeWinnerPopup === 'function') {
-        showAlternativeWinnerPopup(gameData);
-        console.log('대체 승리자 팝업 호출 완료');
+    // 먼저 기본 게임 승리자 모달 시도
+    console.log('기본 승리자 모달 시도...');
+    if (typeof showWinnerModal === 'function') {
+        showWinnerModal(gameData);
+        console.log('기본 승리자 모달 호출 완료');
     } else {
-        console.error('showAlternativeWinnerPopup 함수를 찾을 수 없습니다!');
-        // 최후의 수단 - 단순 알림
-        alert('게임이 종료되었습니다!\n' + (gameData.message || '결과를 확인할 수 없습니다.'));
+        console.warn('showWinnerModal 함수를 찾을 수 없음, 대체 팝업 호출');
+        // 대체 승리자 팝업을 사용하여 확실히 표시
+        if (typeof showAlternativeWinnerPopup === 'function') {
+            showAlternativeWinnerPopup(gameData);
+            console.log('대체 승리자 팝업 호출 완료');
+        } else {
+            console.error('showAlternativeWinnerPopup 함수를 찾을 수 없습니다!');
+            // 최후의 수단 - 단순 알림
+            alert('게임이 종료되었습니다!\n' + (gameData.message || '결과를 확인할 수 없습니다.'));
 
-        // 메인화면으로 이동
-        setTimeout(() => {
-            if (typeof goToMainScreen === 'function') {
-                goToMainScreen();
-            } else {
-                window.location.reload();
-            }
-        }, 2000);
+            // 메인화면으로 이동
+            setTimeout(() => {
+                if (typeof goToMainScreen === 'function') {
+                    goToMainScreen();
+                } else {
+                    window.location.reload();
+                }
+            }, 2000);
+        }
     }
 
     console.log('=== 게임 종료 핸들러 완료 ===');
