@@ -30,8 +30,7 @@ public class GameRoomService {
     private final MessageLogRepository messageLogRepository;
     private final AuditLogRepository auditLogRepository;
     private final SimpMessageSendingOperations messagingTemplate;
-    private final WebSocketConfig webSocketConfig;
-    
+
     public String createRoom(RoomCreateRequest request) {
         String roomCode = generateRoomCode();
         
@@ -125,8 +124,6 @@ public class GameRoomService {
         if (activePlayers.size() < 3) {
             throw new RuntimeException("최소 3명 이상의 플레이어가 필요합니다");
         }
-
-        // 게임 종료 후 새로운 방이 생성되므로 여기서는 채팅 초기화 불필요
 
         room.setState(GameRoom.RoomState.ROUND);
         room.setCurrentRound(1);

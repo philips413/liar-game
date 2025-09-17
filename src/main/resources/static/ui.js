@@ -523,12 +523,8 @@ function displayVoteResult(data) {
 
 
 // 최후진술 완료 단계 표시
-function showFinalDefenseCompletePhase(data) {
-    // 모든 게임 단계 숨기기 (채팅창만 표시)
+function showFinalDefenseCompletePhase() {
     hideAllGamePhases();
-
-    // 최후진술 내용은 이미 채팅창에 표시되었으므로 추가 UI 처리 불필요
-    // 호스트는 이미 handleFinalDefenseComplete()에서 버튼을 받았음
 }
 
 // 생존/사망 투표 단계 표시 (모달 방식)
@@ -551,10 +547,8 @@ function showFinalVotingPhase(accusedPlayer) {
     }
 
     console.log('일반 플레이어 - 투표 모달 표시');
-    // 모든 게임 단계 숨기기 (채팅창만 표시)
     hideAllGamePhases();
 
-    // 모달 방식으로 투표 표시
     showFinalVotingModal(accusedPlayer);
 }
 
@@ -1151,17 +1145,12 @@ function showAlternativeWinnerPopup(data) {
 
 // 최종 투표 결과 팝업 표시
 function showFinalResultModal(data) {
-    console.log('=== 최종 투표 결과 팝업 표시 ===', data);
-
     // DOM이 완전히 로드될 때까지 대기
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => showFinalResultModal(data));
         return;
     }
-
-    // 모든 기존 모달 닫기
     hideAllModals();
-
 }
 
 // 최종 투표 결과 팝업 닫기
