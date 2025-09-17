@@ -1915,8 +1915,16 @@ function handlePlayerDeathStateChange() {
 
 // 플레이어 상태 변경 감지를 위한 헬퍼 함수
 function checkAndUpdateDeadPlayerStatus() {
-    // 게임이 진행 중일 때만 확인
-    if (AppState.gameState && AppState.gameState.state === 'ROUND') {
+    console.log('checkAndUpdateDeadPlayerStatus 호출됨');
+    console.log('AppState.gameState:', AppState.gameState);
+    console.log('AppState.roomInfo:', AppState.roomInfo);
+    console.log('AppState.roomInfo.state:', AppState.roomInfo?.state);
+
+    // 게임이 진행 중일 때만 확인 (방 상태가 ROUND인 경우)
+    if (AppState.roomInfo && AppState.roomInfo.state === 'ROUND') {
+        console.log('게임 진행 중 - 사망한 플레이어 상태 확인');
         handlePlayerDeathStateChange();
+    } else {
+        console.log('게임 진행 중이 아님 - 사망한 플레이어 상태 확인 생략');
     }
 }

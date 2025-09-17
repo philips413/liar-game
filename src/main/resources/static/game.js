@@ -399,14 +399,6 @@ function handleFinalVoteResult(data) {
             updatePlayerAliveStatus(gameData.eliminatedId, false);
         }
 
-        // 사망한 플레이어에게 검은 스크린 표시 확인
-        setTimeout(() => {
-            // if (typeof checkAndUpdateDeadPlayerStatus === 'function') {
-            //     checkAndUpdateDeadPlayerStatus();
-            // }
-            checkAndUpdateDeadPlayerStatus();
-        }, 100);
-
         // 모든 플레이어에게 최종 투표 결과 팝업 표시
         setTimeout(() => {
             showFinalResultModal(gameData);
@@ -439,6 +431,14 @@ function handleFinalVoteResult(data) {
 
         console.log('라운드 완료 - 모든 팝업 및 관련 UI 제거됨');
     }
+
+    // 사망한 플레이어에게 검은 스크린 표시 확인
+    setTimeout(() => {
+        if (typeof checkAndUpdateDeadPlayerStatus === 'function') {
+            console.log('최후 투표 결과 후 사망한 플레이어 상태 확인');
+            checkAndUpdateDeadPlayerStatus();
+        }
+    }, 100);
 
     // 호스트 패널에 투표 결과 표시
     displayVoteResultInHostPanel(gameData);
