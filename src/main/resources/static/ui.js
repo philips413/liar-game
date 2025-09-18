@@ -1509,21 +1509,21 @@ function enhanceVoteCardInteraction() {
 }
 
 // 게임 단계별 모바일 최적화
-function optimizeForGamePhase(phase) {
-    switch(phase) {
-        case 'voting':
-            enhanceVoteCardInteraction();
-            break;
-        case 'description':
-            // 텍스트 입력 시 화면 최적화
-            optimizeTextInput();
-            break;
-        case 'final-defense':
-            // 최후진술 입력 최적화
-            optimizeFinalDefenseInput();
-            break;
-    }
-}
+// function optimizeForGamePhase(phase) {
+//     switch(phase) {
+//         case 'voting':
+//             enhanceVoteCardInteraction();
+//             break;
+//         case 'description':
+//             // 텍스트 입력 시 화면 최적화
+//             optimizeTextInput();
+//             break;
+//         case 'final-defense':
+//             // 최후진술 입력 최적화
+//             optimizeFinalDefenseInput();
+//             break;
+//     }
+// }
 
 // 텍스트 입력 최적화
 function optimizeTextInput() {
@@ -1806,6 +1806,9 @@ function isDeadPlayer() {
     console.log('isAlive 값:', currentPlayer.isAlive);
     console.log('alive 값:', currentPlayer.alive);
 
+    if (currentPlayer.isHost) {
+        showHostControlPanel();
+    }
     // 사망 상태 확인 (isAlive 필드가 false이면 사망)
     // 백엔드 필드명과 일치하도록 isAlive 우선 확인, alive는 백업용
     const isDead = (currentPlayer.isAlive === false) || (currentPlayer.alive === false);
@@ -1919,6 +1922,7 @@ function checkAndUpdateDeadPlayerStatus() {
     console.log('AppState.gameState:', AppState.gameState);
     console.log('AppState.roomInfo:', AppState.roomInfo);
     console.log('AppState.roomInfo.state:', AppState.roomInfo?.state);
+
 
     // 게임이 진행 중일 때만 확인 (방 상태가 ROUND인 경우)
     if (AppState.roomInfo && AppState.roomInfo.state === 'ROUND') {

@@ -21,7 +21,10 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     
     @Query("SELECT COUNT(p) > 0 FROM Player p WHERE p.room.code = :roomCode AND p.nickname = :nickname AND p.leftAt IS NULL")
     boolean existsByRoomCodeAndNicknameAndLeftAtIsNull(@Param("roomCode") String roomCode, @Param("nickname") String nickname);
-    
+
+    @Query("SELECT p FROM Player p WHERE p.room.code = :roomCode AND p.leftAt IS NULL AND p.isAlive = true")
+    List<Player> findByRoomCodeAndLeftAtIsNullAndIsAliveTrue(@Param("roomCode") String roomCode);
+
     // GamePlayService에서 필요한 메소드들 추가
     List<Player> findByRoomAndIsAlive(GameRoom room, boolean isAlive);
     

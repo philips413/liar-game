@@ -621,7 +621,95 @@ public class GameRoomService {
         
         log.info("방 {} 삭제 알림 브로드캐스트 완료", roomCode);
     }
-    
+
+    public boolean assignNewHost(String roomCode, Long leavingHostId) {
+      try {
+        // 떠나는 호스트를 제외한 생존자 중에서 새 호스트를 선택
+        List<Player> alivePlayers = playerRepository.findByRoomCodeAndLeftAtIsNullAndIsAliveTrue(roomCode)
+            .stream()
+            .filter(player -> !player.getPlayerId().equals(leavingHostId))
+            .collect(Collectors.toList());
+
+        if (alivePlayers.isEmpty()) {
+          log.warn("새 호스트로 임명할 생존자가 없음: 방 {}", roomCode);
+          return false;
+        }
+
+        // 가장 먼저 참여한 생존자를 새 호스트로 선택 (playerId 기준)
+        Player newHost = alivePlayers.stream()
+            .min(Comparator.comparing(Player::getPlayerId))
+            .orElse(null);
+
+        if (newHost == null) {
+          log.warn("새 호스트 선택 실패: 방 {}", roomCode);
+          return false;
+        }
+
+        // 새 호스트 권한 부여
+        newHost.setIsHost(true);
+        playerRepository.save(newHost);
+
+        log.info("새 호스트 임명 완료: 방 {}, 새 호스트 {}", roomCode, newHost.getNickname());
+
+        // 새 호스트 임명 알림 브로드캐스트
+        broadcastNewHostAssigned(roomCode, newHost);
+
+        // 새 호스트에게 개인 알림 전송
+        sendPersonalHostNotification(newHost);
+
+        // 감사 로그 기록
+        GameRoom room = gameRoomRepository.findByCode(roomCode).orElse(null);
+        if (room != null) {
+          logAudit(room.getRoomId(), newHost.getPlayerId(), "NEW_HOST_ASSIGNED",
+              String.format("새 호스트 임명: %s", newHost.getNickname()));
+        }
+
+        return true;
+
+      } catch (Exception e) {
+        log.error("새 호스트 임명 중 오류 발생: 방 {}, 오류: {}", roomCode, e.getMessage(), e);
+        return false;
+      }
+    }
+  private void broadcastNewHostAssigned(String roomCode, Player newHost) {
+    Map<String, Object> hostData = Map.of(
+        "playerId", newHost.getPlayerId(),
+        "nickname", newHost.getNickname(),
+        "message", String.format("%s님이 새로운 호스트가 되었습니다.", newHost.getNickname())
+    );
+    GameMessage message = GameMessage.of("NEW_HOST_ASSIGNED", roomCode, hostData);
+    messagingTemplate.convertAndSend("/topic/rooms/" + roomCode, message);
+
+    log.info("새 호스트 임명 알림 브로드캐스트 완료: 방 {}, 새 호스트 {}", roomCode, newHost.getNickname());
+  }
+
+  private void sendPersonalHostNotification(Player newHost) {
+    try {
+      Map<String, Object> personalData = Map.of(
+          "title", "🎯 새로운 호스트 임명",
+          "message", "축하합니다! 이제 게임 진행을 담당하게 되었습니다.",
+          "instructions", "아래 호스트 컨트롤 버튼을 사용하여 게임을 진행해주세요.",
+          "isHost", true
+      );
+
+      GameMessage personalMessage = GameMessage.of("PERSONAL_HOST_NOTIFICATION",
+          newHost.getRoom().getCode(), personalData);
+
+      // 개인 큐로 메시지 전송
+      messagingTemplate.convertAndSendToUser(
+          newHost.getPlayerId().toString(),
+          "/queue/player",
+          personalMessage
+      );
+
+      log.info("새 호스트 개인 알림 전송 완료: 플레이어 ID {}, 닉네임 {}",
+          newHost.getPlayerId(), newHost.getNickname());
+
+    } catch (Exception e) {
+      log.error("새 호스트 개인 알림 전송 실패: 플레이어 ID {}, 오류: {}",
+          newHost.getPlayerId(), e.getMessage(), e);
+    }
+  }
     private void cleanupCurrentRoundData(GameRoom room) {
         String roomCode = room.getCode();
         Long roomId = room.getRoomId();
