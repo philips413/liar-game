@@ -2580,198 +2580,246 @@ textarea {
   }
 }
 
-/* ===== 사망한 플레이어 검은 스크린 오버레이 ===== */
+/* ===== 사망한 플레이어 반투명 레이어 팝업 ===== */
 
-.dead-player-overlay {
+.dead-player-layer-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgba(0, 0, 0, 0.6);
   z-index: calc(var(--z-modal) + 500);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(10px);
-  animation: deadOverlayAppear 1s ease-out;
-  pointer-events: all;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  touch-action: none;
+  backdrop-filter: blur(3px);
+  animation: deadLayerAppear 0.8s ease-out;
+
+    pointer-events: all;
+  cursor: pointer;
 }
 
-.dead-player-overlay.hidden {
+.dead-player-layer-overlay.hidden {
   display: none;
 }
 
-@keyframes deadOverlayAppear {
+@keyframes deadLayerAppear {
   0% {
     opacity: 0;
-    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
   }
   100% {
     opacity: 1;
-    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(3px);
   }
 }
 
-.dead-player-content {
-  text-align: center;
-  color: rgba(255, 255, 255, 0.8);
+.dead-player-layer-popup {
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-xl);
   padding: var(--space-2xl);
   max-width: 500px;
-  position: relative;
+  width: 90%;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: deadPopupSlideIn 0.8s ease-out;
+  pointer-events: auto;
+}
+
+@keyframes deadPopupSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .dead-player-icon {
-  font-size: 5rem;
-  margin-bottom: var(--space-xl);
-  opacity: 0.7;
-  animation: deadIconFloat 3s ease-in-out infinite;
+  font-size: 4rem;
+  margin-bottom: var(--space-lg);
+  opacity: 0.8;
+  animation: deadIconBounce 2s ease-in-out infinite;
 }
 
-@keyframes deadIconFloat {
+@keyframes deadIconBounce {
   0%, 100% {
-    transform: translateY(0) scale(1);
-    opacity: 0.7;
+    transform: scale(1);
+    opacity: 0.8;
   }
   50% {
-    transform: translateY(-10px) scale(1.02);
-    opacity: 0.5;
+    transform: scale(1.1);
+    opacity: 0.6;
   }
 }
 
 .dead-player-title {
-  font-size: var(--text-3xl);
-  font-weight: 800;
-  margin-bottom: var(--space-lg);
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-  animation: deadTitlePulse 2s ease-in-out infinite;
-}
-
-@keyframes deadTitlePulse {
-  0%, 100% {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.01);
-  }
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .dead-player-message {
-  font-size: var(--text-lg);
-  line-height: 1.6;
-  margin-bottom: var(--space-xl);
-  color: rgba(255, 255, 255, 0.7);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  margin-bottom: var(--space-lg);
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .dead-player-restriction {
-  background: rgba(255, 0, 0, 0.1);
-  border: 1px solid rgba(255, 0, 0, 0.3);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-xl);
-  font-size: var(--text-base);
-  color: rgba(255, 100, 100, 0.9);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(5px);
+  background: rgba(255, 50, 50, 0.15);
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  font-size: var(--text-sm);
+  color: rgba(255, 150, 150, 0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .dead-player-restriction::before {
   content: '⚠️';
-  font-size: var(--text-xl);
-  margin-right: var(--space-sm);
-}
-
-.dead-watching-info {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
   font-size: var(--text-base);
-  color: rgba(255, 255, 255, 0.6);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(5px);
+  margin-right: var(--space-xs);
 }
 
-.dead-watching-info::before {
+.dead-player-watching-info {
+  background: rgba(100, 150, 255, 0.1);
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  font-size: var(--text-sm);
+  color: rgba(150, 200, 255, 0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.dead-player-watching-info::before {
   content: '👁️';
-  font-size: var(--text-lg);
-  margin-right: var(--space-sm);
+  font-size: var(--text-base);
+  margin-right: var(--space-xs);
 }
 
-/* 사망 상태 시 모든 인터랙션 차단 */
-.dead-player-overlay * {
+.dead-player-close-hint {
+  margin-top: var(--space-lg);
+  padding: var(--space-sm);
+  font-size: var(--text-xs);
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  animation: hintPulse 3s ease-in-out infinite;
+}
+
+@keyframes hintPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+/* 레이어 오버레이는 클릭 불가능하도록 설정 */
+.dead-player-layer-overlay {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  pointer-events: none;
+}
+
+/* 팝업 내부는 클릭 이벤트 허용하되 버튼 클릭은 방지 */
+.dead-player-layer-popup {
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 팝업 내부의 모든 요소는 클릭해도 이벤트 버블링 방지 */
+.dead-player-layer-popup * {
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  touch-action: none;
 }
+
+/* 관전 모드 전환 애니메이션 제거 (더 이상 사용하지 않음) */
 
 /* 애니메이션 비활성화 사용자를 위한 대체 */
 @media (prefers-reduced-motion: reduce) {
-  .dead-player-overlay {
-    animation: none;
-  }
-
+  .dead-player-layer-overlay,
+  .dead-player-layer-popup,
   .dead-player-icon,
-  .dead-player-title {
-    animation: none;
-    transform: none;
-    opacity: 0.8;
+  .dead-player-close-hint {
+    animation: none !important;
+    transform: none !important;
   }
 }
 
 /* 반응형 디자인 */
 @media (max-width: 768px) {
-  .dead-player-content {
+  .dead-player-layer-popup {
     padding: var(--space-xl);
-    max-width: 90%;
+    width: 95%;
+    max-width: 400px;
   }
 
   .dead-player-icon {
-    font-size: 4rem;
-    margin-bottom: var(--space-lg);
-  }
-
-  .dead-player-title {
-    font-size: var(--text-2xl);
+    font-size: 3rem;
     margin-bottom: var(--space-md);
   }
 
+  .dead-player-title {
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-sm);
+  }
+
   .dead-player-message {
-    font-size: var(--text-base);
-    margin-bottom: var(--space-lg);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-md);
   }
 
   .dead-player-restriction,
-  .dead-watching-info {
-    padding: var(--space-md);
-    font-size: var(--text-sm);
+  .dead-player-watching-info {
+    padding: var(--space-sm);
+    font-size: var(--text-xs);
+    margin-bottom: var(--space-md);
+  }
+
+  .dead-player-close-hint {
+    font-size: var(--text-xxs);
+    padding: var(--space-xs);
   }
 }
 
 /* 가로 모드 최적화 */
 @media (orientation: landscape) and (max-height: 500px) {
-  .dead-player-content {
+  .dead-player-layer-popup {
     padding: var(--space-md);
+    max-height: 90vh;
+    overflow-y: auto;
   }
 
   .dead-player-icon {
-    font-size: 3rem;
-    margin-bottom: var(--space-sm);
+    font-size: 2.5rem;
+    margin-bottom: var(--space-xs);
   }
 
   .dead-player-title {
-    font-size: var(--text-xl);
+    font-size: var(--text-lg);
     margin-bottom: var(--space-sm);
   }
 

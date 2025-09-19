@@ -758,6 +758,15 @@ function showWinnerModal(data) {
     console.log('기존 모달 숨김 처리...');
     hideAllModals();
 
+    // 사망한 플레이어의 팝업도 숨김 (승리자 모달 표시 전)
+    console.log('승리자 모달 표시 전 - 사망 팝업 숨김 처리...');
+    if (typeof hideDeadPlayerOverlay === 'function') {
+        hideDeadPlayerOverlay();
+        console.log('사망 팝업 숨김 완료');
+    } else {
+        console.warn('hideDeadPlayerOverlay 함수를 찾을 수 없습니다');
+    }
+
     // 짧은 지연 후 모달 표시 시도
     console.log('100ms 후 tryShowWinnerModal 호출 예약');
     setTimeout(() => {
@@ -934,6 +943,13 @@ function closeWinnerModal() {
 // 메인화면으로 이동
 function goToMainScreen() {
     console.log('메인화면으로 이동');
+
+    // 사망한 플레이어의 팝업 숨김 (메인화면 이동 시)
+    console.log('메인화면 이동 - 사망 팝업 숨김 처리...');
+    if (typeof hideDeadPlayerOverlay === 'function') {
+        hideDeadPlayerOverlay();
+        console.log('사망 팝업 숨김 완료');
+    }
 
     // WebSocket 연결 해제
     if (AppState.stompClient && AppState.isConnected) {
@@ -1744,11 +1760,11 @@ function resetGameUI() {
     console.log('게임 UI 완전 초기화 완료');
 }
 
-// ===== 사망한 플레이어 검은 스크린 관리 =====
+// ===== 사망한 플레이어 반투명 레이어 팝업 관리 =====
 
-// 사망한 플레이어용 검은 스크린 표시
+// 사망한 플레이어용 레이어 팝업 표시
 function showDeadPlayerOverlay() {
-    console.log('=== 사망한 플레이어 검은 스크린 표시 ===');
+    console.log('=== 사망한 플레이어 레이어 팝업 표시 ===');
 
     const overlay = document.getElementById('dead-player-overlay');
     if (!overlay) {
@@ -1758,20 +1774,23 @@ function showDeadPlayerOverlay() {
 
     // 모든 기존 모달과 UI 요소 숨김
     hideAllModals();
-    hideAllGamePhases();
 
-    // 검은 스크린 표시
+    // 레이어 팝업 표시
     overlay.classList.remove('hidden');
+    overlay.classList.remove('spectating');
 
     // 모든 인터랙션 비활성화
     disableAllInteractions();
 
-    console.log('사망한 플레이어 검은 스크린 표시 완료');
+    // 클릭 이벤트 리스너 추가 (관전 모드 전환)
+    setupDeadPlayerOverlayEvents();
+
+    console.log('사망한 플레이어 레이어 팝업 표시 완료');
 }
 
-// 사망한 플레이어용 검은 스크린 숨김
+// 사망한 플레이어용 레이어 팝업 숨김
 function hideDeadPlayerOverlay() {
-    console.log('=== 사망한 플레이어 검은 스크린 숨김 ===');
+    console.log('=== 사망한 플레이어 레이어 팝업 숨김 ===');
 
     const overlay = document.getElementById('dead-player-overlay');
     if (!overlay) {
@@ -1780,12 +1799,34 @@ function hideDeadPlayerOverlay() {
     }
 
     overlay.classList.add('hidden');
+    overlay.classList.remove('spectating');
 
     // 인터랙션 재활성화
     enableAllInteractions();
 
-    console.log('사망한 플레이어 검은 스크린 숨김 완료');
+    // 이벤트 리스너 제거
+    removeDeadPlayerOverlayEvents();
+
+    console.log('사망한 플레이어 레이어 팝업 숨김 완료');
 }
+
+// 관전 모드 전환 함수 제거 (더 이상 사용하지 않음)
+// 사망한 플레이어는 팝업이 계속 표시됨
+
+// 레이어 팝업 이벤트 설정 (배경 클릭 이벤트 제거)
+function setupDeadPlayerOverlayEvents() {
+    console.log('사망 팝업 이벤트 설정 - 배경 클릭 비활성화');
+    // 배경 클릭 이벤트를 설정하지 않음 (팝업이 사라지지 않도록)
+}
+
+// 레이어 팝업 이벤트 제거 (더 이상 필요 없음)
+function removeDeadPlayerOverlayEvents() {
+    console.log('사망 팝업 이벤트 제거 - 이벤트가 없으므로 제거할 것 없음');
+    // 배경 클릭 이벤트가 없으므로 제거할 필요 없음
+}
+
+// 레이어 팝업 클릭 이벤트 처리 함수 제거
+// (배경 클릭으로 팝업이 사라지지 않도록 하기 위해 완전 제거)
 
 // 사망한 플레이어인지 확인
 function isDeadPlayer() {

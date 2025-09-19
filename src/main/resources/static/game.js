@@ -535,6 +535,15 @@ function handleGameEnd(data) {
     // 모든 대기 모달 닫기
     closeWaitingResultModal();
 
+    // 사망한 플레이어의 팝업 숨김 (게임 종료 시)
+    console.log('게임 종료 - 사망 팝업 숨김 처리...');
+    if (typeof hideDeadPlayerOverlay === 'function') {
+        hideDeadPlayerOverlay();
+        console.log('사망 팝업 숨김 완료');
+    } else {
+        console.warn('hideDeadPlayerOverlay 함수를 찾을 수 없습니다');
+    }
+
     // 게임 UI 완전 초기화
     console.log('게임 UI 초기화 실행...');
     if (typeof resetGameUI === 'function') {
@@ -1168,6 +1177,13 @@ function returnToWaitingRoom() {
 // 메인화면으로 이동
 function returnToMainScreen() {
     console.log('메인화면으로 이동 중...');
+
+    // 사망한 플레이어의 팝업 숨김 (메인화면 이동 시)
+    console.log('메인화면 이동 - 사망 팝업 숨김 처리...');
+    if (typeof hideDeadPlayerOverlay === 'function') {
+        hideDeadPlayerOverlay();
+        console.log('사망 팝업 숨김 완료');
+    }
 
     // WebSocket 연결 해제
     if (AppState.stompClient && AppState.isConnected) {
