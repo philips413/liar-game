@@ -313,13 +313,10 @@ public class GamePlayService {
                 eliminateVotes, surviveVotes, finalVoteResult.get("message"));
         broadcastChatMessage(room.getCode(), "시스템", chatMessage);
 
-        // 플레이어 상태가 변경된 경우 방 상태 업데이트 브로드캐스트
-        if (eliminateVotes > surviveVotes) {
-            // 플레이어가 사망했으므로 방 상태 업데이트를 브로드캐스트하여 프론트엔드에서 사망 처리
-            gameRoomService.broadcastRoomStateUpdate(room.getCode());
-            log.info("플레이어 사망으로 인한 방 상태 업데이트 브로드캐스트: roomCode={}, eliminatedPlayer={}",
-                    room.getCode(), accused.getNickname());
-        }
+        // 플레이어가 사망했으므로 방 상태 업데이트를 브로드캐스트하여 프론트엔드에서 사망 처리
+        gameRoomService.broadcastRoomStateUpdate(room.getCode());
+        log.info("플레이어 사망으로 인한 방 상태 업데이트 브로드캐스트: roomCode={}, eliminatedPlayer={}",
+                room.getCode(), accused.getNickname());
 
         // 자동으로 다음 라운드 진행 (2초 지연 후)
         if (!willGameEnd) {
@@ -772,7 +769,10 @@ public class GamePlayService {
 
         // 새 라운드 시작 알림
         broadcastRoundStateChange(room.getCode(), "READY",
-                Map.of("message", String.format("%d라운드가 시작되었습니다! 호스트가 설명 단계를 시작할 때까지 기다려주세요.", roundIdx)));
+                Map.of(
+                    "message", String.format("%d라운드가 시작되었습니다! 아직 라이어는 살아있습니다.", roundIdx),
+                    "currentRound", roundIdx
+                ));
     }
 
     private void reassignRolesAndWords(List<Player> players, Theme theme) {

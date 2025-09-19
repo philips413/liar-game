@@ -124,14 +124,6 @@ function bindModalEventListeners() {
         });
     }
 
-    // 투표 결과 모달 (있는 경우)
-    const voteResultCloseBtn = document.getElementById('vote-result-close-btn');
-    if (voteResultCloseBtn) {
-        voteResultCloseBtn.addEventListener('click', () => {
-            hideModal('vote-result-modal');
-        });
-    }
-
     // 텍스트 입력 문자수 카운팅 (주석처리된 요소에 대한 안전 처리)
     const modalDescInput = document.getElementById('modal-description-input');
     const modalDescCharCount = document.getElementById('modal-desc-char-count');

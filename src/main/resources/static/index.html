@@ -138,7 +138,7 @@
             <div class="container senior-friendly">
                 <!-- 게임 상태 표시 -->
                 <div class="game-status">
-                    <div class="round-info">
+                    <div id="round-info" class="round-info">
                         <span id="current-round">1</span> / <span id="total-rounds">3</span> 라운드
                     </div>
                     <div class="phase-info" id="phase-info">대기 중...</div>
@@ -146,7 +146,6 @@
 
                 <!-- 내 정보 -->
                 <div class="my-info">
-                    <div class="my-nickname">나: <span id="game-my-nickname"></span></div>
                     <div class="my-role" id="my-role"></div>
                     <div class="my-word" id="my-word"></div>
                 </div>
@@ -278,21 +277,6 @@
             </div>
         </div>
 
-        <!-- 투표 결과 팝업 -->
-        <div id="vote-result-modal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>투표 결과</h3>
-                </div>
-                <div class="modal-body">
-                    <div id="vote-result-content"></div>
-                </div>
-                <div class="modal-footer">
-                    <button id="vote-result-close-btn" class="btn btn-primary">확인</button>
-                </div>
-            </div>
-        </div>
-
         <!-- 라이어 투표 팝업 -->
         <div id="voting-modal" class="modal-overlay hidden">
             <div class="modal-content">
@@ -307,7 +291,6 @@
                 </div>
                 <div class="modal-footer">
                     <div class="vote-status">투표할 플레이어를 선택해주세요</div>
-                    <button id="close-voting-modal-btn" class="btn btn-secondary" onclick="closeVotingModal()">취소</button>
                 </div>
             </div>
         </div>
@@ -479,8 +462,8 @@
         </div>
     </div>
 
-    <script src="/game.js?v=22"></script>
-    <script src="/ui.js?v=21"></script>
-    <script src="/app.js?v=17"></script>
+    <script src="/game.js?v=20250919"></script>
+    <script src="/ui.js?v=20250919"></script>
+    <script src="/app.js?v=20250919"></script>
 </body>
 </html>

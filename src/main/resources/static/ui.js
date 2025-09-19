@@ -130,40 +130,40 @@ function showGameScreen() {
 
 // 내 정보 표시 업데이트 (게임 화면)
 function updateMyInfoDisplay() {
-    document.getElementById('game-my-nickname').textContent = AppState.playerInfo.nickname;
-    
+    // document.getElementById('game-my-nickname').textContent = AppState.playerInfo.nickname;
+
     const myRoleElement = document.getElementById('my-role');
     const myWordElement = document.getElementById('my-word');
-    
+
     if (AppState.playerInfo.role) {
         if (AppState.playerInfo.role === 'LIAR') {
             myRoleElement.textContent = '🎭 라이어';
             myRoleElement.className = 'my-role liar';
             myWordElement.textContent = '❓❓❓';
             myWordElement.className = 'my-word liar-word';
-            
+
             // 라이어 역할 강조 효과
             setTimeout(() => {
                 myRoleElement.style.animation = 'none';
                 myRoleElement.offsetHeight; // 리플로우 강제 실행
                 myRoleElement.style.animation = 'roleReveal 0.8s ease-out';
             }, 100);
-            
+
         } else {
             myRoleElement.textContent = '👥 시민';
             myRoleElement.className = 'my-role citizen';
             myWordElement.textContent = AppState.playerInfo.cardWord || '';
             myWordElement.className = 'my-word';
-            
+
             // 시민 역할 강조 효과
             setTimeout(() => {
                 myRoleElement.style.animation = 'none';
-                myRoleElement.offsetHeight; // 리플로우 강제 실행  
+                myRoleElement.offsetHeight; // 리플로우 강제 실행
                 myRoleElement.style.animation = 'roleReveal 0.8s ease-out';
             }, 100);
         }
     }
-    
+
     // 대기실 역할 정보도 함께 업데이트
     updateWaitingRoomRoleDisplay();
 }
@@ -173,18 +173,18 @@ function updateWaitingRoomRoleDisplay() {
     const nicknameElement = document.getElementById('waiting-game-my-nickname');
     const roleElement = document.getElementById('waiting-my-role');
     const wordElement = document.getElementById('waiting-my-word');
-    
+
     if (!nicknameElement || !roleElement || !wordElement) {
         console.warn('대기실 역할 표시 요소를 찾을 수 없습니다');
         return;
     }
-    
+
     // 닉네임 업데이트
     nicknameElement.textContent = AppState.playerInfo.nickname || '';
-    
+
     if (AppState.playerInfo.role) {
         console.log('대기실에 역할 정보 표시:', AppState.playerInfo.role);
-        
+
         if (AppState.playerInfo.role === 'LIAR') {
             roleElement.textContent = '🎭 라이어';
             roleElement.className = 'my-role liar';
@@ -210,7 +210,7 @@ function updateWaitingRoomRoleDisplay() {
 function updateGamePlayersList() {
     const gamePlayersElement = document.getElementById('game-players-list');
     if (!gamePlayersElement) return;
-    
+
     gamePlayersElement.innerHTML = AppState.players.map(player => `
         <div class="game-player-item ${player.isAlive ? 'alive' : 'dead'} ${player.playerId === AppState.playerInfo.id ? 'me' : ''}">
             ${player.nickname}
@@ -227,7 +227,7 @@ function updateRoundDisplay() {
 // 게임 단계 표시 업데이트
 function updateGamePhaseDisplay(data) {
     const phaseInfo = document.getElementById('phase-info');
-    
+
     // 호스트가 아닌 플레이어도 특정 단계에서는 UI 변경 필요
     if (!AppState.playerInfo.isHost) {
         // 모든 게임 단계 숨기기
@@ -268,13 +268,13 @@ function updateGamePhaseDisplay(data) {
         }
         return; // 호스트가 아니면 여기서 종료
     }
-    
+
     // 호스트인 경우에만 게임 단계 화면 변경
     // 모든 게임 단계 숨기기
     document.querySelectorAll('.game-phase').forEach(phase => {
         phase.classList.add('hidden');
     });
-    
+
     switch (data.state || AppState.gamePhase) {
         case 'DESC':
             showDescriptionPhaseWithoutModal();
@@ -314,20 +314,20 @@ function updateGamePhaseDisplay(data) {
 function showDescriptionPhaseWithoutModal() {
     const descriptionPhase = document.getElementById('description-phase');
     descriptionPhase.classList.remove('hidden');
-    
+
     // 모달 내 입력 필드 초기화
     const modalDescInput = document.getElementById('modal-description-input');
     if (modalDescInput) {
         modalDescInput.value = '';
         modalDescInput.disabled = false;
     }
-    
+
     // 모달 글자 수 카운터 초기화
     const modalCharCount = document.getElementById('modal-desc-char-count');
     if (modalCharCount) {
         modalCharCount.textContent = '0';
     }
-    
+
     // 모달 이벤트 리스너 바인딩 확인
     if (modalDescInput && !modalDescInput.hasAttribute('data-listener-bound')) {
         modalDescInput.addEventListener('input', handleDescriptionInput);
@@ -346,13 +346,13 @@ function showDescriptionPhase() {
         modalDescInput.value = '';
         modalDescInput.disabled = false;
     }
-    
+
     // 모달 글자 수 카운터 초기화
     const modalCharCount = document.getElementById('modal-desc-char-count');
     if (modalCharCount) {
         modalCharCount.textContent = '0';
     }
-    
+
     // 모달 이벤트 리스너 바인딩 확인
     if (modalDescInput && !modalDescInput.hasAttribute('data-listener-bound')) {
         modalDescInput.addEventListener('input', handleDescriptionInput);
@@ -363,13 +363,13 @@ function showDescriptionPhase() {
 // 설명 입력 처리
 function handleDescriptionInput(e) {
     const count = e.target.value.length;
-    
+
     // 모달 내 글자수 카운터 업데이트
     const charCount = document.getElementById('modal-desc-char-count');
     if (charCount) {
         charCount.textContent = count;
     }
-    
+
     // 모달 내 제출 버튼 활성화/비활성화
     const submitBtn = document.getElementById('modal-submit-description-btn');
     if (submitBtn) {
@@ -390,9 +390,9 @@ function showDescriptionCompletePhase() {
     if (!AppState.playerInfo.isHost) {
         return;
     }
-    
+
     const descCompletePhase = document.getElementById('description-complete-phase');
-    
+
     if (descCompletePhase) {
         descCompletePhase.classList.remove('hidden');
     }
@@ -477,50 +477,11 @@ function handleVoteModalClick(targetPlayerId) {
     }
 }
 
-// 투표 클릭 처리 (기존 함수 - 호환성 유지)
-function handleVoteClick(targetPlayerId) {
-    // 모달 방식으로 리다이렉트
-    handleVoteModalClick(targetPlayerId);
-}
-
 // 투표 모달 닫기
 function closeVotingModal() {
     const votingModal = document.getElementById('voting-modal');
     votingModal.classList.add('hidden');
 }
-
-// 투표 결과 표시
-function displayVoteResult(data) {
-    const modalContent = document.getElementById('vote-result-content');
-
-    if (data.results && data.results.length > 0) {
-        modalContent.innerHTML = data.results.map(result => `
-            <div class="vote-result-item">
-                <div class="vote-result-name">${result.playerName}</div>
-                <div class="vote-result-count">${result.voteCount}표</div>
-            </div>
-        `).join('');
-    }
-    
-    // 결과에 따른 메시지 추가
-    if (data.accusedName) {
-        const accusedMessage = document.createElement('div');
-        accusedMessage.className = 'vote-result-summary';
-        accusedMessage.innerHTML = `<p><strong>${data.accusedName}님이 지목되었습니다!</strong></p>`;
-        modalContent.appendChild(accusedMessage);
-        
-        console.log('투표 결과 - 지목자:', data.accusedName, '지목자 ID:', data.accusedId);
-    } else {
-        const noAccusedMessage = document.createElement('div');
-        noAccusedMessage.className = 'vote-result-summary';
-        noAccusedMessage.innerHTML = '<p>과반수 득표자가 없어 다음 라운드로 진행합니다.</p>';
-        modalContent.appendChild(noAccusedMessage);
-    }
-    
-    showModal('vote-result-modal');
-}
-
-
 
 // 최후진술 완료 단계 표시
 function showFinalDefenseCompletePhase() {
@@ -634,14 +595,14 @@ function showRoundEndPhase(data) {
     if (!AppState.playerInfo.isHost) {
         return;
     }
-    
+
     const roundEndPhase = document.getElementById('round-end-phase');
     roundEndPhase.classList.remove('hidden');
-    
+
     const roundResult = document.getElementById('round-result');
     const hostRoundControls = document.getElementById('host-round-controls');
     const waitingNextRound = document.getElementById('waiting-next-round');
-    
+
     // 라운드 결과 표시
     let resultMessage = '';
     if (data.eliminated) {
@@ -655,14 +616,14 @@ function showRoundEndPhase(data) {
     } else {
         resultMessage = '이번 라운드는 아무도 처형되지 않았습니다.';
     }
-    
+
     roundResult.innerHTML = `
         <div class="round-result-message">${resultMessage}</div>
         <div class="round-info">
             <span>현재 ${AppState.roomInfo.currentRound} / ${AppState.roomInfo.roundLimit} 라운드</span>
         </div>
     `;
-    
+
     // 호스트 전용 컨트롤 표시 (게임이 계속되는 경우에만)
     if (AppState.playerInfo.isHost && !data.gameEnded) {
         hostRoundControls.classList.remove('hidden');
@@ -680,14 +641,14 @@ function showRoundEndPhase(data) {
 function showGameEndPhase(data) {
     const gameEndPhase = document.getElementById('game-end-phase');
     gameEndPhase.classList.remove('hidden');
-    
+
     const resultTitle = document.getElementById('game-result-title');
     const winnerInfo = document.getElementById('winner-info');
     const playersRoles = document.getElementById('players-roles');
-    
+
     // 역할별 맞춤 메시지 표시
     console.log('게임 종료 데이터:', data);
-    
+
     // 제목과 메시지는 서버에서 전송된 개인화된 메시지 사용
     if (data.reason) {
         switch (data.reason) {
@@ -718,10 +679,10 @@ function showGameEndPhase(data) {
                 }
         }
     }
-    
+
     // 개인화된 메시지 표시
     winnerInfo.textContent = data.message || '게임이 종료되었습니다.';
-    
+
     // 플레이어 역할 공개
     if (data.players) {
         playersRoles.innerHTML = `
@@ -1183,24 +1144,24 @@ function closeFinalResultModal() {
 function limitTextInput(inputId, maxLength, counterId) {
     const input = document.getElementById(inputId);
     const counter = document.getElementById(counterId);
-    
+
     // 요소가 존재하지 않으면 함수 종료
     if (!input || !counter) {
         return;
     }
-    
+
     input.addEventListener('input', function() {
         const currentLength = this.value.length;
         counter.textContent = currentLength;
-        
+
         if (currentLength >= maxLength) {
             this.value = this.value.substring(0, maxLength);
             counter.textContent = maxLength;
         }
-        
+
         // 제출 버튼 활성화/비활성화
         let submitBtn = null;
-        
+
         // description-input의 경우 직접 ID로 찾기
         if (this.id === 'description-input') {
             submitBtn = document.getElementById('submit-description-btn');
@@ -1211,7 +1172,7 @@ function limitTextInput(inputId, maxLength, counterId) {
                 submitBtn = gamePhase.querySelector('.btn-primary');
             }
         }
-        
+
         if (submitBtn) {
             submitBtn.disabled = currentLength === 0;
         }
@@ -1255,13 +1216,13 @@ function addChatMessage(senderName, message, messageType = false) {
 function addSystemMessage(message, messageType = 'info') {
     const chatMessages = document.getElementById('chat-messages');
     if (!chatMessages) return;
-    
+
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message system-message ${messageType}`;
-    
+
     const iconDiv = document.createElement('div');
     iconDiv.className = 'system-icon';
-    
+
     // 메시지 타입에 따른 아이콘 설정
     switch(messageType) {
         case 'game-start':
@@ -1285,16 +1246,16 @@ function addSystemMessage(message, messageType = 'info') {
         default:
             iconDiv.textContent = '💬';
     }
-    
+
     const textDiv = document.createElement('div');
     textDiv.className = 'system-text';
     textDiv.textContent = message;
-    
+
     messageDiv.appendChild(iconDiv);
     messageDiv.appendChild(textDiv);
-    
+
     chatMessages.appendChild(messageDiv);
-    
+
     // 스크롤을 최하단으로 이동
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -1304,12 +1265,12 @@ function updateDescriptionInput() {
     const input = document.getElementById('description-input');
     const charCount = document.getElementById('desc-char-count');
     const submitBtn = document.getElementById('submit-description-btn');
-    
+
     if (!input || !charCount || !submitBtn) return;
-    
+
     const count = input.value.length;
     charCount.textContent = count;
-    
+
     // 입력이 있고 버튼이 아직 비활성화되지 않았을 때만 활성화
     submitBtn.disabled = count === 0 || submitBtn.dataset.submitted === 'true';
 }
@@ -1319,14 +1280,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // 글자 수 제한 설정
     limitTextInput('description-input', 200, 'desc-char-count');
     limitTextInput('final-defense-input', 300, 'final-char-count');
-    
+
     // 새로운 설명 입력 필드 이벤트 리스너
     const descInput = document.getElementById('description-input');
     if (descInput) {
         descInput.addEventListener('input', updateDescriptionInput);
         descInput.addEventListener('keyup', updateDescriptionInput);
     }
-    
+
     // 모바일 최적화 초기화
     initializeMobileOptimizations();
 });
@@ -1337,16 +1298,16 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeMobileOptimizations() {
     // 터치 이벤트 최적화
     setupTouchEvents();
-    
+
     // 키보드 이벤트 처리
     setupKeyboardHandling();
-    
+
     // 화면 방향 변경 처리
     setupOrientationHandling();
-    
+
     // iOS Safari 뷰포트 높이 이슈 수정
     fixIOSViewportHeight();
-    
+
     // 더블 탭 줌 방지
     preventDoubleTapZoom();
 }
@@ -1359,13 +1320,13 @@ function setupTouchEvents() {
             e.target.classList.add('touching');
         }
     }, { passive: true });
-    
+
     document.addEventListener('touchend', function(e) {
         if (e.target.matches('.btn, .vote-player-card, .player-item')) {
             e.target.classList.remove('touching');
         }
     }, { passive: true });
-    
+
     // 스크롤 성능 최적화
     let scrollTimer = null;
     document.addEventListener('scroll', function(e) {
@@ -1384,7 +1345,7 @@ function setupTouchEvents() {
 function setupKeyboardHandling() {
     // 입력 필드 포커스 시 화면 조정
     const inputs = document.querySelectorAll('input, textarea');
-    
+
     inputs.forEach(input => {
         input.addEventListener('focus', function() {
             // 키보드가 올라올 때를 대비해 약간의 지연 후 스크롤
@@ -1396,7 +1357,7 @@ function setupKeyboardHandling() {
                 });
             }, 300);
         });
-        
+
         // 모바일에서 엔터 키 처리
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -1425,14 +1386,14 @@ function setupOrientationHandling() {
             fixIOSViewportHeight();
         }, 500);
     }
-    
+
     // 방향 변경 이벤트 리스너
     if ('orientation' in screen) {
         screen.orientation.addEventListener('change', handleOrientationChange);
     } else {
         window.addEventListener('orientationchange', handleOrientationChange);
     }
-    
+
     // 리사이즈 이벤트도 처리
     let resizeTimer = null;
     window.addEventListener('resize', function() {
@@ -1446,7 +1407,7 @@ function fixIOSViewportHeight() {
     // iOS Safari에서 주소창 때문에 100vh가 정확하지 않은 문제 해결
     const viewportHeight = window.innerHeight;
     document.documentElement.style.setProperty('--vh', `${viewportHeight * 0.01}px`);
-    
+
     // CSS에서 height: 100vh 대신 height: calc(var(--vh, 1vh) * 100) 사용
 }
 
@@ -1468,29 +1429,29 @@ const MobileUtils = {
     isMobile: function() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     },
-    
+
     // iOS 감지
     isIOS: function() {
         return /iPad|iPhone|iPod/.test(navigator.userAgent);
     },
-    
+
     // 안드로이드 감지
     isAndroid: function() {
         return /Android/i.test(navigator.userAgent);
     },
-    
+
     // 키보드 표시 상태 감지
     isKeyboardVisible: function() {
         return window.innerHeight < window.screen.height * 0.75;
     },
-    
+
     // 진동 피드백 (지원하는 기기만)
     vibrate: function(pattern = [100]) {
         if ('vibrate' in navigator) {
             navigator.vibrate(pattern);
         }
     },
-    
+
     // 터치 좌표 정규화
     getTouchCoordinates: function(e) {
         const touch = e.touches ? e.touches[0] : e;
@@ -1504,19 +1465,19 @@ const MobileUtils = {
 // 투표 카드 터치 개선
 function enhanceVoteCardInteraction() {
     const voteCards = document.querySelectorAll('.vote-player-card');
-    
+
     voteCards.forEach(card => {
         // 터치 시작
         card.addEventListener('touchstart', function(e) {
             this.style.transform = 'scale(0.95)';
             MobileUtils.vibrate([50]); // 짧은 진동 피드백
         }, { passive: true });
-        
+
         // 터치 종료
         card.addEventListener('touchend', function(e) {
             this.style.transform = '';
         }, { passive: true });
-        
+
         // 터치 취소
         card.addEventListener('touchcancel', function(e) {
             this.style.transform = '';
@@ -1587,7 +1548,7 @@ function addHostStatusMessage(message, type = 'info') {
     if (!AppState.playerInfo.isHost) {
         return; // 호스트가 아니면 무시
     }
-    
+
     const statusArea = document.getElementById('host-status-area');
     if (!statusArea) return;
 
@@ -1598,10 +1559,10 @@ function addHostStatusMessage(message, type = 'info') {
     messageDiv.textContent = message;
 
     statusArea.appendChild(messageDiv);
-    
+
     // 스크롤을 최하단으로 이동
     statusArea.scrollTop = statusArea.scrollHeight;
-    
+
     // 메시지가 너무 많으면 오래된 것 제거 (최대 10개 유지)
     const messages = statusArea.querySelectorAll('.host-status-message');
     if (messages.length > 10) {
@@ -1614,7 +1575,7 @@ function clearHostStatusMessages() {
     if (!AppState.playerInfo.isHost) {
         return;
     }
-    
+
     const statusArea = document.getElementById('host-status-area');
     if (statusArea) {
         statusArea.innerHTML = '';
@@ -1626,18 +1587,18 @@ function setHostActionButton(buttonText, buttonAction, buttonType = 'primary') {
     if (!AppState.playerInfo.isHost) {
         return;
     }
-    
+
     const actionsArea = document.getElementById('host-actions-area');
     if (!actionsArea) return;
-    
+
     // 기존 버튼들 제거
     actionsArea.innerHTML = '';
-    
+
     const button = document.createElement('button');
     button.className = `btn btn-${buttonType}`;
     button.textContent = buttonText;
     button.onclick = buttonAction;
-    
+
     actionsArea.appendChild(button);
 }
 
@@ -1646,23 +1607,23 @@ function setHostActionButtons(buttons) {
     if (!AppState.playerInfo.isHost) {
         return;
     }
-    
+
     const actionsArea = document.getElementById('host-actions-area');
     if (!actionsArea) return;
-    
+
     // 기존 버튼들 제거
     actionsArea.innerHTML = '';
-    
+
     buttons.forEach(buttonConfig => {
         const button = document.createElement('button');
         button.className = `btn btn-${buttonConfig.type || 'primary'}`;
         button.textContent = buttonConfig.text;
         button.onclick = buttonConfig.action;
-        
+
         if (buttonConfig.disabled) {
             button.disabled = true;
         }
-        
+
         actionsArea.appendChild(button);
     });
 }
