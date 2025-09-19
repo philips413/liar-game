@@ -321,6 +321,19 @@ public class GamePlayService {
                     room.getCode(), accused.getNickname());
         }
 
+        // 자동으로 다음 라운드 진행 (2초 지연 후)
+        if (!willGameEnd) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    Thread.sleep(2000); // 2초 지연
+                    proceedToNextRound(room);
+                } catch (InterruptedException e) {
+                    log.error("자동 라운드 진행 중 오류", e);
+                    Thread.currentThread().interrupt();
+                }
+            });
+        }
+
         // 라운드 종료 처리
         completeCurrentRound(room, currentRound);
     }
@@ -674,7 +687,16 @@ public class GamePlayService {
                     eliminateVotes, surviveVotes, accused.getNickname());
             broadcastChatMessage(room.getCode(), "시스템", chatMessage);
 
-            proceedToNextRound(room);
+            // 자동으로 다음 라운드 진행 (2초 지연 후)
+            CompletableFuture.runAsync(() -> {
+                try {
+                    Thread.sleep(2000); // 2초 지연
+                    proceedToNextRound(room);
+                } catch (InterruptedException e) {
+                    log.error("자동 라운드 진행 중 오류", e);
+                    Thread.currentThread().interrupt();
+                }
+            });
         }
 
         round.setState(Round.RoundState.END);

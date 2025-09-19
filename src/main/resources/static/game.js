@@ -450,25 +450,18 @@ function handleFinalVoteResult(data) {
             showFinalResultModal(gameData);
         }, 300);
 
-        // 게임이 끝나지 않는 경우 자동으로 다음 라운드 진행
+        // 게임이 끝나지 않는 경우 자동 라운드 진행 안내 메시지 표시
         if (!gameData.willGameEnd) {
-            console.log('게임이 계속됨 - 3초 후 자동으로 다음 라운드 진행');
+            console.log('게임이 계속됨 - 서버에서 자동으로 다음 라운드 진행');
 
             // 모든 플레이어에게 자동 진행 안내 메시지 표시
             const phaseInfo = document.getElementById('phase-info');
             if (phaseInfo) {
-                phaseInfo.textContent = '라운드 완료 - 3초 후 자동으로 다음 라운드가 시작됩니다...';
+                phaseInfo.textContent = '라운드 완료 - 잠시 후 자동으로 다음 라운드가 시작됩니다...';
             }
 
-            // 호스트인 경우 3초 후 자동으로 다음 라운드 진행 (호스트가 사망하지 않은 경우에만)
-            if (AppState.playerInfo.isHost && AppState.playerInfo.isAlive) {
-                setTimeout(() => {
-                    console.log('자동으로 다음 라운드 진행 중...');
-                    handleProceedNextRound();
-                }, 3000);
-            } else if (AppState.playerInfo.isHost && !AppState.playerInfo.isAlive) {
-                console.log('호스트가 사망하여 다음 라운드 진행 권한이 새로운 호스트로 이전됩니다.');
-            }
+            // 백엔드에서 자동으로 다음 라운드를 진행하므로 프론트엔드에서는 대기만 함
+            console.log('백엔드에서 자동으로 다음 라운드를 진행합니다.');
         } else {
             // 게임이 끝나는 경우 기존 메시지 표시
             const phaseInfo = document.getElementById('phase-info');
