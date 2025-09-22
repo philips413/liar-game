@@ -1,5 +1,146 @@
 // WebSocket 연결 및 게임 상태 관리
 
+// 모바일 브라우저 백그라운드/포어그라운드 감지 변수
+let isPageVisible = true;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 3;
+let reconnectTimer = null;
+
+// Page Visibility API 초기화
+function initPageVisibility() {
+    // 다양한 브라우저 호환성을 위한 변수 설정
+    let hidden, visibilityChange;
+    if (typeof document.hidden !== "undefined") {
+        hidden = "hidden";
+        visibilityChange = "visibilitychange";
+    } else if (typeof document.msHidden !== "undefined") {
+        hidden = "msHidden";
+        visibilityChange = "msvisibilitychange";
+    } else if (typeof document.webkitHidden !== "undefined") {
+        hidden = "webkitHidden";
+        visibilityChange = "webkitvisibilitychange";
+    }
+
+    // 페이지 가시성 변경 이벤트 리스너
+    if (typeof document[hidden] !== "undefined") {
+        document.addEventListener(visibilityChange, function() {
+            isPageVisible = !document[hidden];
+            console.log('페이지 가시성 변경:', isPageVisible ? '포어그라운드' : '백그라운드');
+
+            if (isPageVisible) {
+                // 포어그라운드로 돌아왔을 때 재연결 시도
+                handlePageVisible();
+            } else {
+                // 백그라운드로 갔을 때
+                handlePageHidden();
+            }
+        }, false);
+    }
+
+    // 초기 상태 설정
+    isPageVisible = typeof document.hidden !== "undefined" ? !document.hidden : true;
+}
+
+// 페이지가 포어그라운드로 돌아왔을 때 처리
+function handlePageVisible() {
+    console.log('페이지가 포어그라운드로 돌아옴 - 재연결 확인');
+
+    // WebSocket이 연결되어 있지 않다면 재연결 시도
+    if (!AppState.isConnected && AppState.roomInfo && AppState.playerInfo) {
+        console.log('연결이 끊어진 상태 감지 - 재연결 시도');
+        attemptReconnect();
+    }
+}
+
+// 페이지가 백그라운드로 갔을 때 처리
+function handlePageHidden() {
+    console.log('페이지가 백그라운드로 이동');
+    // 백그라운드 상태 기록 (필요시 추가 로직)
+}
+
+// 재연결 시도
+async function attemptReconnect() {
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        console.log('최대 재연결 시도 횟수 초과');
+        showReconnectFailedModal();
+        return;
+    }
+
+    reconnectAttempts++;
+    console.log(`재연결 시도 ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+
+    try {
+        // WebSocket 재연결
+        await connectWebSocket();
+
+        // 재연결 성공
+        console.log('재연결 성공');
+        reconnectAttempts = 0;
+
+        // 방 상태 동기화
+        await syncRoomState();
+
+    } catch (error) {
+        console.error('재연결 실패:', error);
+
+        // 재시도 타이머 설정 (3초 후)
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectTimer = setTimeout(() => {
+                attemptReconnect();
+            }, 3000);
+        } else {
+            showReconnectFailedModal();
+        }
+    }
+}
+
+// 방 상태 동기화
+async function syncRoomState() {
+    if (!AppState.roomInfo || !AppState.playerInfo) {
+        return;
+    }
+
+    try {
+        // 현재 방 정보 재조회
+        const response = await fetch(`/api/rooms/${AppState.roomInfo.code}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (response.ok) {
+            const roomData = await response.json();
+            console.log('방 상태 동기화 성공:', roomData);
+
+            // 방 정보 업데이트
+            AppState.roomInfo = roomData;
+
+            // UI 업데이트
+            updateRoomInfo(roomData);
+
+        } else if (response.status === 404) {
+            // 방이 존재하지 않음
+            console.log('방이 삭제되었습니다');
+            showRoomNotFoundModal();
+        }
+    } catch (error) {
+        console.error('방 상태 동기화 실패:', error);
+    }
+}
+
+// 재연결 실패 모달
+function showReconnectFailedModal() {
+    alert('연결이 복구되지 않았습니다. 메인 화면으로 이동합니다.');
+    returnToMainScreen();
+}
+
+// 방을 찾을 수 없음 모달
+function showRoomNotFoundModal() {
+    alert('방이 삭제되었습니다. 메인 화면으로 이동합니다.');
+    returnToMainScreen();
+}
+
 // WebSocket 연결
 async function connectWebSocket() {
     return new Promise((resolve, reject) => {
@@ -653,8 +794,8 @@ function updateRoomState(roomState) {
         }
 
         if (typeof updatePlayersList === 'function') {
-        updatePlayersList();
-    }
+            updatePlayersList();
+        }
 
         // 강제 버튼 업데이트
         setTimeout(() => {
@@ -677,6 +818,50 @@ function updateRoomState(roomState) {
             updateGameState(roomState);
         }
     }
+}
+
+// 방 정보 업데이트 (재연결 시 사용)
+function updateRoomInfo(roomData) {
+    if (!roomData) return;
+
+    console.log('방 정보 업데이트:', roomData);
+
+    // 방 정보 업데이트
+    AppState.roomInfo = { ...AppState.roomInfo, ...roomData };
+    AppState.players = roomData.players || AppState.players;
+
+    // 내 정보 업데이트
+    const myPlayer = AppState.players.find(p => p.playerId === AppState.playerInfo.id);
+    if (myPlayer) {
+        AppState.playerInfo.isHost = myPlayer.isHost;
+        AppState.playerInfo.isAlive = myPlayer.isAlive;
+        if (myPlayer.role) {
+            AppState.playerInfo.role = myPlayer.role;
+        }
+        if (myPlayer.cardWord) {
+            AppState.playerInfo.cardWord = myPlayer.cardWord;
+        }
+    }
+
+    // UI 업데이트
+    if (typeof updatePlayersList === 'function') {
+        updatePlayersList();
+    }
+
+    // 게임 화면 상태에 따른 화면 전환
+    if (roomData.state === 'ROUND') {
+        showGameScreen();
+        if (roomData.gamePhase) {
+            updateGamePhaseDisplay({
+                state: roomData.gamePhase,
+                currentRound: roomData.currentRound
+            });
+        }
+    } else {
+        showWaitingRoom();
+    }
+
+    console.log('방 정보 업데이트 완료');
 }
 
 // 게임 상태 업데이트

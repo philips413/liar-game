@@ -4,6 +4,7 @@ import com.liargame.domain.dto.*;
 import com.liargame.domain.entity.*;
 import com.liargame.domain.repository.*;
 import com.liargame.config.WebSocketConfig;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import com.liargame.websocket.GameMessage;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,9 @@ public class GameRoomService {
     private final MessageLogRepository messageLogRepository;
     private final AuditLogRepository auditLogRepository;
     private final SimpMessageSendingOperations messagingTemplate;
+
+    @Autowired
+    private WebSocketConfig webSocketConfig;
 
     public String createRoom(RoomCreateRequest request) {
         String roomCode = generateRoomCode();
@@ -713,9 +717,9 @@ public class GameRoomService {
     private void cleanupCurrentRoundData(GameRoom room) {
         String roomCode = room.getCode();
         Long roomId = room.getRoomId();
-        
+
         log.info("게임 중단으로 인한 현재 라운드 데이터 정리 시작: 방 {}", roomCode);
-        
+
         try {
             // 현재 라운드의 모든 관련 데이터 삭제
             List<Round> rounds = roundRepository.findByRoomCodeOrderByIdxAsc(roomCode);
@@ -725,14 +729,49 @@ public class GameRoomService {
                 // 메시지 로그 삭제
                 messageLogRepository.deleteByRoundRoundId(round.getRoundId());
             }
-            
+
             // 라운드 데이터 삭제
             roundRepository.deleteByRoomRoomId(roomId);
-            
+
             log.info("라운드 데이터 정리 완료: 방 {}", roomCode);
-            
+
         } catch (Exception e) {
             log.error("라운드 데이터 정리 중 오류 발생: 방 {}, 오류: {}", roomCode, e.getMessage(), e);
+        }
+    }
+
+    // 플레이어 재연결 가능 여부 확인
+    public boolean canPlayerReconnect(String roomCode, Long playerId) {
+        try {
+            // 방이 존재하는지 확인
+            GameRoom room = gameRoomRepository.findByCode(roomCode).orElse(null);
+            if (room == null) {
+                log.info("재연결 체크: 방 {} 존재하지 않음", roomCode);
+                return false;
+            }
+
+            // 플레이어가 존재하고 퇴장하지 않았는지 확인
+            Player player = playerRepository.findById(playerId).orElse(null);
+            if (player == null || player.getLeftAt() != null || !player.getRoom().getCode().equals(roomCode)) {
+                log.info("재연결 체크: 플레이어 {} 퇴장했거나 존재하지 않음", playerId);
+                return false;
+            }
+
+            // WebSocket 세션에서 재연결 가능한지 확인
+            if (webSocketConfig != null) {
+                boolean canReconnectFromSession = webSocketConfig.canPlayerReconnect(roomCode, playerId);
+                log.info("재연결 체크: 방 {}, 플레이어 {}, WebSocket 세션 재연결 가능: {}",
+                        roomCode, playerId, canReconnectFromSession);
+                return canReconnectFromSession;
+            }
+
+            log.info("재연결 체크: WebSocket 설정을 찾을 수 없음, 기본 허용");
+            return true;
+
+        } catch (Exception e) {
+            log.error("재연결 가능 여부 확인 중 오류: 방 {}, 플레이어 {}, 오류: {}",
+                    roomCode, playerId, e.getMessage());
+            return false;
         }
     }
 }

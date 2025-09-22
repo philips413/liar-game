@@ -67,6 +67,36 @@ public class GameRoomController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    @GetMapping("/{code}")
+    public ResponseEntity<?> getRoomInfo(@PathVariable String code) {
+        try {
+            GameStateResponse state = gameRoomService.getRoomState(code);
+            return ResponseEntity.ok(state);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/{code}/reconnect")
+    public ResponseEntity<?> checkReconnectable(
+            @PathVariable String code,
+            @RequestParam Long playerId) {
+        try {
+            boolean canReconnect = gameRoomService.canPlayerReconnect(code, playerId);
+            if (canReconnect) {
+                GameStateResponse state = gameRoomService.getRoomState(code);
+                return ResponseEntity.ok(Map.of(
+                    "canReconnect", true,
+                    "roomState", state
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of("canReconnect", false));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
     
     @GetMapping("/{code}/leave")
     public ResponseEntity<Map<String, String>> leaveRoom(

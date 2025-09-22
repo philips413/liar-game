@@ -35,6 +35,12 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeApp() {
     console.log('라이어 게임 앱 초기화 시작');
 
+    // Page Visibility API 초기화 (모바일 브라우저 재연결 지원)
+    if (typeof initPageVisibility === 'function') {
+        initPageVisibility();
+        console.log('Page Visibility API 초기화 완료');
+    }
+
     // URL 파라미터 확인
     const urlParams = new URLSearchParams(window.location.search);
     const roomCode = urlParams.get('room');
