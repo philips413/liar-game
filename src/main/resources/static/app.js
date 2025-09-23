@@ -130,14 +130,6 @@ function bindModalEventListeners() {
         });
     }
 
-    // 텍스트 입력 문자수 카운팅 (주석처리된 요소에 대한 안전 처리)
-    const modalDescInput = document.getElementById('modal-description-input');
-    const modalDescCharCount = document.getElementById('modal-desc-char-count');
-    if (modalDescInput && modalDescCharCount) {
-        modalDescInput.addEventListener('input', () => {
-            modalDescCharCount.textContent = modalDescInput.value.length;
-        });
-    }
 }
 
 // 모달 표시

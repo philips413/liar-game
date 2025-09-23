@@ -315,24 +315,6 @@ function showDescriptionPhaseWithoutModal() {
     const descriptionPhase = document.getElementById('description-phase');
     descriptionPhase.classList.remove('hidden');
 
-    // 모달 내 입력 필드 초기화
-    const modalDescInput = document.getElementById('modal-description-input');
-    if (modalDescInput) {
-        modalDescInput.value = '';
-        modalDescInput.disabled = false;
-    }
-
-    // 모달 글자 수 카운터 초기화
-    const modalCharCount = document.getElementById('modal-desc-char-count');
-    if (modalCharCount) {
-        modalCharCount.textContent = '0';
-    }
-
-    // 모달 이벤트 리스너 바인딩 확인
-    if (modalDescInput && !modalDescInput.hasAttribute('data-listener-bound')) {
-        modalDescInput.addEventListener('input', handleDescriptionInput);
-        modalDescInput.setAttribute('data-listener-bound', 'true');
-    }
 }
 
 // 설명 작성 단계 표시 (팝업 포함)
@@ -340,42 +322,8 @@ function showDescriptionPhase() {
     const descriptionPhase = document.getElementById('description-phase');
     descriptionPhase.classList.remove('hidden');
 
-    // 모달 내 입력 필드 초기화
-    const modalDescInput = document.getElementById('modal-description-input');
-    if (modalDescInput) {
-        modalDescInput.value = '';
-        modalDescInput.disabled = false;
-    }
-
-    // 모달 글자 수 카운터 초기화
-    const modalCharCount = document.getElementById('modal-desc-char-count');
-    if (modalCharCount) {
-        modalCharCount.textContent = '0';
-    }
-
-    // 모달 이벤트 리스너 바인딩 확인
-    if (modalDescInput && !modalDescInput.hasAttribute('data-listener-bound')) {
-        modalDescInput.addEventListener('input', handleDescriptionInput);
-        modalDescInput.setAttribute('data-listener-bound', 'true');
-    }
 }
 
-// 설명 입력 처리
-function handleDescriptionInput(e) {
-    const count = e.target.value.length;
-
-    // 모달 내 글자수 카운터 업데이트
-    const charCount = document.getElementById('modal-desc-char-count');
-    if (charCount) {
-        charCount.textContent = count;
-    }
-
-    // 모달 내 제출 버튼 활성화/비활성화
-    const submitBtn = document.getElementById('modal-submit-description-btn');
-    if (submitBtn) {
-        submitBtn.disabled = count === 0;
-    }
-}
 
 // 최후진술 입력 처리
 function handleFinalDefenseInput(e) {
