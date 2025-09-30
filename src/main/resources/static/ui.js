@@ -411,6 +411,7 @@ function handleVoteModalClick(targetPlayerId) {
 
             // 확인 후 투표 제출
             if (confirm(`${targetPlayer.nickname}님에게 투표하시겠습니까?`)) {
+                playSound('buttonClick');
                 handleVoteSubmit(targetPlayerId);
                 // 투표 완료 후 모달 닫기
                 closeVotingModal();
@@ -427,6 +428,7 @@ function handleVoteModalClick(targetPlayerId) {
 
 // 투표 모달 닫기
 function closeVotingModal() {
+    playSound('modalClose');
     const votingModal = document.getElementById('voting-modal');
     votingModal.classList.add('hidden');
 }
@@ -463,6 +465,8 @@ function showFinalVotingPhase(accusedPlayer) {
 
 // 생존/사망 투표 모달 표시
 function showFinalVotingModal(accusedPlayer) {
+    playSound('modalOpen');
+
     const finalVotingModal = document.getElementById('final-voting-modal');
     const modalAccusedName = document.getElementById('modal-accused-player-name');
 
@@ -488,6 +492,7 @@ function showFinalVotingModal(accusedPlayer) {
 
 // 생존/사망 투표 모달 닫기
 function closeFinalVotingModal() {
+    playSound('modalClose');
     const finalVotingModal = document.getElementById('final-voting-modal');
     if (finalVotingModal) {
         finalVotingModal.classList.add('hidden');

@@ -41,6 +41,9 @@ function initializeApp() {
         console.log('Page Visibility API 초기화 완료');
     }
 
+    // 사운드 시스템 초기화
+    initializeSoundSystem();
+
     // URL 파라미터 확인
     const urlParams = new URLSearchParams(window.location.search);
     const roomCode = urlParams.get('room');
@@ -164,7 +167,12 @@ function showStartGameCountdown() {
     // 카운트다운 업데이트
     const updateCountdown = () => {
         countdownElement.textContent = countdown;
-        
+
+        // 카운트다운 효과음 재생
+        if (countdown > 0) {
+            playSound('countdownTick');
+        }
+
         if (countdown > 0) {
             countdown--;
             AppState.countdownTimer = setTimeout(updateCountdown, 1000);
@@ -969,4 +977,132 @@ function showManualCopyModal(text) {
     const textarea = modal.querySelector('textarea');
     textarea.focus();
     textarea.select();
+}
+
+// ===== 사운드 설정 기능 =====
+
+// 사운드 토글
+function toggleSound() {
+    if (audioManager) {
+        const newState = !audioManager.soundEnabled;
+        audioManager.setSoundEnabled(newState);
+        updateSoundUI();
+
+        // 토글 효과음 재생 (사운드가 활성화되는 경우만)
+        if (newState) {
+            playSound('buttonClick');
+        }
+    }
+}
+
+// 볼륨 설정
+function setVolume(value) {
+    const volume = parseInt(value) / 100;
+    if (audioManager) {
+        audioManager.setMasterVolume(volume);
+        updateVolumeUI(value);
+
+        // 볼륨 조절 효과음 재생 (매번 재생하지 않도록 throttle)
+        clearTimeout(window.volumeThrottle);
+        window.volumeThrottle = setTimeout(() => {
+            playSound('notification', { volume: 0.3 });
+        }, 200);
+    }
+}
+
+// 사운드 UI 업데이트
+function updateSoundUI() {
+    const soundIcon = document.getElementById('sound-icon');
+    const soundText = document.getElementById('sound-text');
+    const soundBtn = document.getElementById('sound-toggle-btn');
+
+    if (soundIcon && soundText && soundBtn) {
+        const isEnabled = audioManager ? audioManager.soundEnabled : true;
+
+        soundIcon.textContent = isEnabled ? '🔊' : '🔇';
+        soundText.textContent = isEnabled ? '사운드 ON' : '사운드 OFF';
+
+        if (isEnabled) {
+            soundBtn.classList.remove('disabled');
+        } else {
+            soundBtn.classList.add('disabled');
+        }
+    }
+}
+
+// 볼륨 UI 업데이트
+function updateVolumeUI(value) {
+    const volumeValue = document.getElementById('volume-value');
+    if (volumeValue) {
+        volumeValue.textContent = value + '%';
+    }
+}
+
+// 사운드 설정 초기화
+function initializeSoundSettings() {
+    if (audioManager) {
+        // 저장된 설정에서 UI 업데이트
+        const volume = Math.round(audioManager.masterVolume * 100);
+
+        const volumeSlider = document.getElementById('volume-slider');
+        if (volumeSlider) {
+            volumeSlider.value = volume;
+        }
+
+        updateVolumeUI(volume);
+        updateSoundUI();
+
+        console.log(`사운드 설정 초기화: 볼륨 ${volume}%, 사운드 ${audioManager.soundEnabled ? 'ON' : 'OFF'}`);
+    }
+}
+
+// 버튼 클릭 사운드 추가 (기존 버튼들에 사운드 효과 추가)
+function addButtonClickSounds() {
+    // 모든 버튼에 클릭 사운드 추가
+    document.addEventListener('click', function(event) {
+        if (event.target.matches('button, .btn, .player-card, .vote-player-card')) {
+            playSound('buttonClick');
+        }
+    });
+
+    console.log('버튼 클릭 사운드 리스너 추가 완료');
+}
+
+// 예약된 사운드 이벤트 (시스템 메시지 등에 사운드 추가)
+function addSystemSounds() {
+    // 알림 메시지에 사운드 추가
+    const originalShowNotification = window.showNotification;
+    if (originalShowNotification) {
+        window.showNotification = function(message, type = 'info') {
+            if (type === 'error') {
+                playSound('error');
+            } else {
+                playSound('notification');
+            }
+            return originalShowNotification.call(this, message, type);
+        };
+    }
+}
+
+// 사운드 시스템 초기화 (다른 초기화 후에 호출)
+function initializeSoundSystem() {
+    // 오디오 매니저가 이미 초기화되어 있는지 확인
+    if (typeof audioManager !== 'undefined' && audioManager) {
+        initializeSoundSettings();
+        addButtonClickSounds();
+        addSystemSounds();
+        console.log('사운드 시스템 초기화 완료');
+    } else {
+        // 오디오 매니저가 로드되지 않았다면 잠시 후 재시도
+        setTimeout(() => {
+            if (typeof audioManager !== 'undefined' && audioManager) {
+                initializeSoundSettings();
+                addButtonClickSounds();
+                addSystemSounds();
+                console.log('사운드 시스템 지연 초기화 완룜');
+            } else {
+                console.warn('오디오 매니저를 찾을 수 없습니다. 사운드 기능이 비활성화됩니다.');
+            }
+        }, 1000);
+    }
 }

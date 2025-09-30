@@ -94,7 +94,7 @@ async function attemptReconnect() {
     }
 }
 
-// 방 상태 동기화
+// 방 상태 동기화 및 놓친 이벤트 감지
 async function syncRoomState() {
     if (!AppState.roomInfo || !AppState.playerInfo) {
         return;
@@ -113,8 +113,14 @@ async function syncRoomState() {
             const roomData = await response.json();
             console.log('방 상태 동기화 성공:', roomData);
 
+            // 이전 방 상태 저장
+            const previousRoomState = AppState.roomInfo ? { ...AppState.roomInfo } : null;
+
             // 방 정보 업데이트
             AppState.roomInfo = roomData;
+
+            // 놓친 이벤트 감지 및 처리
+            await detectMissedEvents(previousRoomState, roomData);
 
             // UI 업데이트
             updateRoomInfo(roomData);
@@ -127,6 +133,234 @@ async function syncRoomState() {
     } catch (error) {
         console.error('방 상태 동기화 실패:', error);
     }
+}
+
+// 놓친 이벤트 감지 및 처리
+async function detectMissedEvents(previousState, currentState) {
+    if (!previousState || !currentState) {
+        console.log('이전 상태가 없어 놓친 이벤트 감지 생략');
+        return;
+    }
+
+    console.log('놓친 이벤트 감지 시작:', {
+        이전상태: previousState.state,
+        현재상태: currentState.state,
+        이전라운드상태: previousState.currentRound?.state,
+        현재라운드상태: currentState.currentRound?.state
+    });
+
+    // 1. 투표 시작 감지
+    if (previousState.currentRound?.state !== 'VOTING' &&
+        currentState.currentRound?.state === 'VOTING') {
+        console.log('🚨 놓친 이벤트 감지: 투표가 시작되었습니다!');
+
+        // 중요한 알림 표시
+        showMissedEventNotification('투표가 시작되었습니다!', '투표 단계', () => {
+            // 투표 화면으로 즉시 이동
+            if (typeof showVotingPhase === 'function') {
+                showVotingPhase(currentState.players || AppState.players);
+            }
+        });
+
+        // 투표 UI 활성화
+        if (typeof showVotingPhase === 'function') {
+            showVotingPhase(currentState.players || AppState.players);
+        }
+    }
+
+    // 2. 생존/사망 투표 시작 감지
+    if (previousState.currentRound?.state !== 'FINAL_VOTING' &&
+        currentState.currentRound?.state === 'FINAL_VOTING') {
+        console.log('🚨 놓친 이벤트 감지: 생존/사망 투표가 시작되었습니다!');
+
+        showMissedEventNotification('생존/사망 투표가 시작되었습니다!', '최종 투표 단계', () => {
+            // 생존/사망 투표 화면으로 즉시 이동
+            if (typeof showFinalVotingPhase === 'function' && currentState.currentRound?.accusedPlayer) {
+                showFinalVotingPhase(currentState.currentRound.accusedPlayer);
+            }
+        });
+    }
+
+    // 3. 게임 종료 감지
+    if (previousState.state !== 'END' && currentState.state === 'END') {
+        console.log('🚨 놓친 이벤트 감지: 게임이 종료되었습니다!');
+
+        showMissedEventNotification('게임이 종료되었습니다!', '게임 결과 확인', () => {
+            // 게임 종료 화면으로 이동
+            if (typeof handleGameEnd === 'function') {
+                handleGameEnd(currentState);
+            }
+        });
+    }
+
+    // 4. 설명 단계 시작 감지
+    if (previousState.currentRound?.state !== 'DESCRIPTION' &&
+        currentState.currentRound?.state === 'DESCRIPTION') {
+        console.log('🚨 놓친 이벤트 감지: 설명 단계가 시작되었습니다!');
+
+        showMissedEventNotification('설명 단계가 시작되었습니다!', '단어 설명하기', () => {
+            // 설명 단계 UI 활성화
+            activateDescriptionPhase();
+        });
+    }
+}
+
+// 놓친 이벤트 알림 모달 표시
+function showMissedEventNotification(message, phase, onConfirm) {
+    // 기존 알림이 있다면 제거
+    const existingModal = document.getElementById('missed-event-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // 새로운 알림 모달 생성
+    const modalHtml = `
+        <div id="missed-event-modal" class="modal-overlay" style="z-index: 9999;">
+            <div class="modal-content missed-event-modal">
+                <div class="missed-event-icon">⚠️</div>
+                <div class="missed-event-title">중요한 게임 이벤트 발생!</div>
+                <div class="missed-event-message">${message}</div>
+                <div class="missed-event-phase">현재 단계: ${phase}</div>
+                <div class="missed-event-actions">
+                    <button class="btn btn-primary" onclick="handleMissedEventConfirm()">지금 참여하기</button>
+                </div>
+                <div class="missed-event-hint">백그라운드 상태에서 발생한 이벤트입니다</div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // 전역 함수로 확인 핸들러 등록
+    window.handleMissedEventConfirm = () => {
+        const modal = document.getElementById('missed-event-modal');
+        if (modal) {
+            modal.remove();
+        }
+        if (onConfirm) {
+            onConfirm();
+        }
+        // 전역 함수 정리
+        delete window.handleMissedEventConfirm;
+    };
+
+    // 자동 진동 (모바일에서)
+    if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+    }
+
+    // 3초 후 자동 실행 (사용자가 클릭하지 않으면)
+    setTimeout(() => {
+        if (document.getElementById('missed-event-modal')) {
+            window.handleMissedEventConfirm();
+        }
+    }, 3000);
+}
+
+// 설명 단계 활성화 함수
+function activateDescriptionPhase() {
+    console.log('설명 단계 활성화');
+
+    // 설명 입력 필드 활성화
+    const descriptionInput = document.getElementById('description-input');
+    const submitDescBtn = document.getElementById('submit-desc-btn');
+
+    if (descriptionInput && submitDescBtn) {
+        descriptionInput.disabled = false;
+        descriptionInput.placeholder = '단어에 대한 설명을 작성해주세요...';
+        submitDescBtn.disabled = false;
+        submitDescBtn.textContent = '단어설명';
+        submitDescBtn.classList.remove('btn-secondary');
+        submitDescBtn.classList.add('btn-primary');
+    }
+
+    // 채팅창 표시
+    const chatContainer = document.getElementById('chat-container');
+    if (chatContainer) {
+        chatContainer.classList.remove('hidden');
+    }
+
+    // 시스템 메시지 추가
+    addSystemMessage('설명 단계가 시작되었습니다. 단어에 대한 설명을 작성해주세요.', 'description');
+}
+
+// 일반 투표 참여 가능성 체크
+function canParticipateInVoting() {
+    // 기본 조건 체크
+    if (!AppState.roomInfo || !AppState.playerInfo) {
+        showNotification('게임 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+        return false;
+    }
+
+    // 현재 플레이어 정보 확인
+    const currentPlayer = AppState.players?.find(p => p.id === AppState.playerInfo.id);
+    if (!currentPlayer) {
+        showNotification('플레이어 정보를 찾을 수 없습니다.');
+        return false;
+    }
+
+    // 사망한 플레이어는 투표 불가
+    if (!currentPlayer.alive) {
+        showNotification('사망한 플레이어는 투표에 참여할 수 없습니다.');
+        return false;
+    }
+
+    // 게임 상태 체크
+    if (AppState.roomInfo.state !== 'ROUND') {
+        showNotification('현재 투표를 진행할 수 없는 상태입니다.');
+        return false;
+    }
+
+    // 라운드 상태 체크
+    if (AppState.roomInfo.currentRound?.state !== 'VOTING') {
+        showNotification('현재 투표 단계가 아닙니다.');
+        return false;
+    }
+
+    return true;
+}
+
+// 생존/사망 투표 참여 가능성 체크
+function canParticipateInFinalVoting() {
+    // 기본 조건 체크
+    if (!AppState.roomInfo || !AppState.playerInfo) {
+        showNotification('게임 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+        return false;
+    }
+
+    // 현재 플레이어 정보 확인
+    const currentPlayer = AppState.players?.find(p => p.id === AppState.playerInfo.id);
+    if (!currentPlayer) {
+        showNotification('플레이어 정보를 찾을 수 없습니다.');
+        return false;
+    }
+
+    // 사망한 플레이어는 투표 불가
+    if (!currentPlayer.alive) {
+        showNotification('사망한 플레이어는 투표에 참여할 수 없습니다.');
+        return false;
+    }
+
+    // 지목된 플레이어는 자신에 대한 생존/사망 투표에 참여 불가
+    const accusedPlayer = AppState.roomInfo.currentRound?.accusedPlayer;
+    if (accusedPlayer && accusedPlayer.id === AppState.playerInfo.id) {
+        showNotification('지목된 플레이어는 자신에 대한 투표에 참여할 수 없습니다.');
+        return false;
+    }
+
+    // 게임 상태 체크
+    if (AppState.roomInfo.state !== 'ROUND') {
+        showNotification('현재 투표를 진행할 수 없는 상태입니다.');
+        return false;
+    }
+
+    // 라운드 상태 체크
+    if (AppState.roomInfo.currentRound?.state !== 'FINAL_VOTING') {
+        showNotification('현재 생존/사망 투표 단계가 아닙니다.');
+        return false;
+    }
+
+    return true;
 }
 
 // 재연결 실패 모달
@@ -286,13 +520,16 @@ function handleWebSocketMessage(data) {
 // 플레이어 참가 처리
 function handlePlayerJoined(data) {
     console.log('플레이어 참가:', data);
-    
+
     const player = data.data?.player;
     if (!player) {
         console.error('플레이어 데이터가 없습니다:', data);
         return;
     }
-    
+
+    // 플레이어 참가 효과음 재생
+    playSound('playerJoin');
+
     // 플레이어 목록 업데이트
     const existingIndex = AppState.players.findIndex(p => p.playerId === player.playerId);
     if (existingIndex >= 0) {
@@ -300,7 +537,7 @@ function handlePlayerJoined(data) {
     } else {
         AppState.players.push(player);
     }
-    
+
     if (typeof updatePlayersList === 'function') {
         updatePlayersList();
     }
@@ -309,13 +546,16 @@ function handlePlayerJoined(data) {
 // 플레이어 퇴장 처리
 function handlePlayerLeft(data) {
     console.log('플레이어 퇴장:', data);
-    
+
     const player = data.data?.player;
     if (!player) {
         console.error('플레이어 데이터가 없습니다:', data);
         return;
     }
-    
+
+    // 플레이어 퇴장 효과음 재생
+    playSound('playerLeave');
+
     AppState.players = AppState.players.filter(p => p.playerId !== player.playerId);
     if (typeof updatePlayersList === 'function') {
         updatePlayersList();
@@ -355,6 +595,9 @@ function handleGameStarted(data) {
     AppState.gameState = gameState;
     AppState.roomInfo.state = gameData.roomState || 'ROUND';
     AppState.roomInfo.currentRound = gameData.currentRound || 1;
+
+    // 게임 시작 효과음 재생
+    playSound('gameStart');
 
     // 5초 카운트다운 시작
     showStartGameCountdown();
@@ -465,6 +708,9 @@ function handleAllDescriptionsComplete(data) {
     console.log('모든 설명 완료:', gameData);
     console.log('descriptions 데이터:', gameData.descriptions);
 
+    // 설명 완료 효과음 재생
+    playSound('success');
+
     // 모든 플레이어의 설명이 완료되었음을 호스트에게 알림
     if (AppState.playerInfo.isHost) {
         addHostStatusMessage('모든 플레이어의 설명이 완료되었습니다.', 'info');
@@ -486,6 +732,9 @@ function handleVoteResult(data) {
     console.log('원본 데이터:', data);
     console.log('처리할 데이터:', gameData);
     console.log('현재 플레이어 정보:', AppState.playerInfo);
+
+    // 투표 결과 효과음 재생
+    playSound('voteResult');
 
     displayVoteResultInChat(gameData);
 
@@ -574,6 +823,8 @@ function handleFinalVoteResult(data) {
         // 플레이어 생존 상태 업데이트 (필요한 경우)
         if (gameData.eliminatedId && gameData.outcome === 'eliminated') {
             console.log('플레이어 사망 처리:', gameData.eliminatedId);
+            // 사망 효과음 재생
+            playSound('elimination');
             updatePlayerAliveStatus(gameData.eliminatedId, false);
 
             // 현재 플레이어가 호스트이고 사망한 경우 호스트 상태 업데이트
@@ -614,6 +865,11 @@ function handleFinalVoteResult(data) {
             if (phaseInfo) {
                 phaseInfo.textContent = '라운드 완료 - 게임이 곧 종료됩니다.';
             }
+        }
+
+        // 생존한 경우 생존 효과음 재생
+        if (gameData.outcome === 'survived') {
+            playSound('survival');
         }
 
         console.log('라운드 완료 - 모든 팝업 및 관련 UI 제거됨');
@@ -659,6 +915,9 @@ function handleFinalVotingStart(data) {
     const gameData = data.data || data;
     console.log('재투표 시작:', gameData);
 
+    // 생존/사망 투표 시작 효과음 재생
+    playSound('voteStart');
+
     // 호스트에게 생존/사망 투표 시작 알림
     if (AppState.playerInfo.isHost && gameData.accusedPlayer) {
         addHostStatusMessage(`${gameData.accusedPlayer.nickname}님에 대한 생존/사망 투표가 시작되었습니다.`, 'warning');
@@ -696,6 +955,15 @@ function handleGameEnd(data) {
         console.warn('resetGameUI 함수를 찾을 수 없습니다');
     }
 
+    // 게임 종료 효과음 재생 (승리/패배에 따라 구분)
+    if (gameData.winnerTeam === 'LIAR' || (gameData.winner && gameData.winner.role === 'LIAR')) {
+        playSound('victory'); // 라이어 승리
+    } else if (gameData.winnerTeam === 'CITIZEN') {
+        playSound('victory'); // 시민 승리
+    } else {
+        playSound('victory'); // 기본 승리 사운드
+    }
+
     // 먼저 기본 게임 승리자 모달 시도
     console.log('기본 승리자 모달 시도...');
     if (typeof showWinnerModal === 'function') {
@@ -729,6 +997,9 @@ function handleGameEnd(data) {
 // 게임 중단 처리
 function handleGameInterrupted(data) {
     console.log('게임 중단:', data);
+
+    // 게임 중단 효과음 재생
+    playSound('error');
 
     const leftPlayer = data.data?.leftPlayer;
     const playerName = leftPlayer ? leftPlayer.nickname : '한 플레이어';
@@ -936,6 +1207,9 @@ async function handleSubmitDescription() {
             throw new Error(errorMessage);
         }
 
+        // 설명 제출 성공 효과음 재생
+        playSound('descriptionSubmit');
+
         // 채팅창에 내 메시지 추가
         addChatMessage(AppState.playerInfo.nickname, descriptionText, true);
 
@@ -944,6 +1218,9 @@ async function handleSubmitDescription() {
 
     } catch (error) {
         console.error('설명 제출 오류:', error);
+
+        // 오류 효과음 재생
+        playSound('error');
 
         if (error.name === 'TypeError' || error.message.includes('fetch')) {
             showNotification('네트워크 연결을 확인해주세요.');
@@ -976,16 +1253,25 @@ async function handleStartVoting() {
             throw new Error('투표 시작에 실패했습니다.');
         }
 
+        // 투표 시작 효과음 재생
+        playSound('voteStart');
+
         // 시스템 메시지는 WebSocket 응답에서 처리됨
 
     } catch (error) {
         console.error('투표 시작 오류:', error);
+        playSound('error');
         showNotification(error.message);
     }
 }
 
 // 투표 제출
 async function handleVoteSubmit(targetPlayerId) {
+    // 투표 참여 가능성 체크
+    if (!canParticipateInVoting()) {
+        return;
+    }
+
     if (targetPlayerId === AppState.playerInfo.id) {
         showNotification('자기 자신에게 투표할 수 없습니다.');
         return;
@@ -1003,6 +1289,9 @@ async function handleVoteSubmit(targetPlayerId) {
             throw new Error('투표 제출에 실패했습니다.');
         }
 
+        // 투표 제출 성공 효과음 재생
+        playSound('voteSubmit');
+
         // 투표 UI 비활성화
         document.querySelectorAll('.vote-player-card').forEach(card => {
             card.classList.add('disabled');
@@ -1016,6 +1305,7 @@ async function handleVoteSubmit(targetPlayerId) {
 
     } catch (error) {
         console.error('투표 제출 오류:', error);
+        playSound('error');
         showNotification(error.message);
     }
 }
@@ -1023,6 +1313,9 @@ async function handleVoteSubmit(targetPlayerId) {
 // 최후진술 모달 표시
 function showFinalDefenseModal() {
     console.log('최후진술 모달 표시');
+
+    // 최후진술 효과음 재생
+    playSound('finalDefense');
 
     // 모달 입력 필드 초기화
     const modalInput = document.getElementById('modal-final-defense-input');
@@ -1162,6 +1455,11 @@ async function handleStartFinalVoting() {
 
 // 생존/사망 투표 제출
 async function handleFinalVote(decision) {
+    // 투표 참여 가능성 체크
+    if (!canParticipateInFinalVoting()) {
+        return;
+    }
+
     // 중복 투표 방지
     const surviveBtn = document.getElementById('survive-vote-btn');
     const eliminateBtn = document.getElementById('eliminate-vote-btn');
@@ -1224,6 +1522,11 @@ async function handleFinalVote(decision) {
 
 // 모달에서 생존/사망 투표 제출
 async function handleModalFinalVote(decision) {
+    // 투표 참여 가능성 체크
+    if (!canParticipateInFinalVoting()) {
+        return;
+    }
+
     // 중복 투표 방지
     const modalSurviveBtn = document.getElementById('modal-survive-vote-btn');
     const modalEliminateBtn = document.getElementById('modal-eliminate-vote-btn');
